@@ -16,7 +16,7 @@ embedded-graphics = "0.7"
 # embedded-text = "0.5.0-beta.2"
 bitvec = "0.22"
 tinybmp = "0.3.1"
-config = {version = "0.11", features = ["toml"]}
+config = { version = "0.11.0", features = ["toml"] }
 futures-core = "0.3"
 async-stream = "0.3"
 futures = "0.3"
@@ -25,7 +25,7 @@ linkme = "0.2"
 log = "0.4"
 
 dbus = {version = "0.9", optional = true}
-dbus-tokio = {version = "0.7", optional = true}
+dbus-tokio = { version = "0.7.4", optional = true }
 mpris = {version = "2.0.0-rc2", optional = true}
 ctrlc = "3.2.0"
 simplelog = "0.10.0"
@@ -40,6 +40,7 @@ serde_json = { version = "1.0", optional = true }
 reqwest = { version = "0.11.4", optional = true, features = ["json", "brotli", "stream", "gzip", "deflate"] }
 chrono = "0.4.19"
 embedded-graphics-simulator = { version = "0.3.0", optional = true }
+toml = "0.5.8"
 
 [features]
 default = ["dbus-support", "crypto", "usb"]
@@ -48,3 +49,6 @@ http = ["serde", "serde_json", "reqwest"]
 crypto = ["http"]
 simulator = ["embedded-graphics-simulator"]
 usb = ["hidapi", "tauri-hotkey"]
+debug = []
+
+

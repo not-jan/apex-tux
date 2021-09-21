@@ -21,8 +21,12 @@ enum SupportedDevice {
 }
 
 pub struct USBDevice {
+    /// An exclusive handle to the Keyboard.
     handle: HidDevice,
-    hkm: HotkeyManager,
+    /// The hot key manager that handles the key combinations to change the
+    /// screen It'll unregister all keys if dropped so it has to be
+    /// persisted even if unused.
+    _hkm: HotkeyManager,
 }
 
 impl USBDevice {
@@ -67,12 +71,12 @@ impl USBDevice {
             },
             move || {
                 sender2
-                    .blocking_send(scheduler::Command::PreviousSource)
+                    .blocking_send(scheduler::Command::NextSource)
                     .expect("Failed to send command!");
             },
         )?;
 
-        Ok(USBDevice { handle, hkm })
+        Ok(USBDevice { handle, _hkm: hkm })
     }
 }
 

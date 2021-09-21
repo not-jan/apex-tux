@@ -15,6 +15,7 @@ use mpris::{Metadata, PlaybackStatus, Player, PlayerFinder, Progress};
 
 use log::info;
 use tinybmp::Bmp;
+use tokio::{task, time};
 
 use crate::render::{
     scheduler::CONTENT_PROVIDERS,
@@ -22,7 +23,30 @@ use crate::render::{
 };
 
 use crate::render::scheduler::ContentWrapper;
-use std::{convert::TryInto, lazy::SyncLazy};
+use config::Config;
+use dbus::{
+    message::MatchRule,
+    nonblock,
+    nonblock::SyncConnection,
+    strings::{Interface, Member},
+    Path,
+};
+use dbus_tokio::connection;
+use embedded_graphics::{
+    mono_font::{ascii, MonoTextStyle},
+    text::{Baseline, Text},
+};
+use std::{
+    convert::{TryFrom, TryInto},
+    future::Future,
+    lazy::SyncLazy,
+    sync::Arc,
+    thread,
+};
+use tokio::{
+    task::JoinHandle,
+    time::{Duration, MissedTickBehavior},
+};
 
 static NOTE_ICON: &[u8] = include_bytes!("./../../assets/note.bmp");
 static PAUSE_ICON: &[u8] = include_bytes!("./../../assets/pause.bmp");
@@ -74,17 +98,38 @@ static PAUSE_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
     base
 });
 
+static IDLE_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
+    let mut base = *PAUSE_TEMPLATE;
+    let style = MonoTextStyle::new(&ascii::FONT_6X10, BinaryColor::On);
+    Text::with_baseline(
+        "No player found",
+        Point::new(5 + 3 + 24, 3),
+        style,
+        Baseline::Top,
+    )
+    .draw(&mut base)
+    .expect("Failed to prepare 'idle' template for music player");
+    base
+});
+
 static UNKNOWN_TITLE: &str = "Unknown title";
 static UNKNOWN_ARTIST: &str = "Unknown artist";
 
+const RECONNECT_DELAY: u64 = 5;
+
 #[distributed_slice(CONTENT_PROVIDERS)]
-static PROVIDER_INIT: fn() -> Result<Box<dyn ContentWrapper>> = register_callback;
+static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = register_callback;
 
 #[allow(clippy::unnecessary_wraps)]
-fn register_callback() -> Result<Box<dyn ContentWrapper>> {
+fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     info!("Registering MPRIS2 display source.");
-    let player = Box::new(MediaPlayerBuilder::new().with_player_name("Lollypop"));
-    Ok(player)
+
+    let player = match config.get_str("mpris2.preferred_player") {
+        Ok(name) => MediaPlayerBuilder::new().with_player_name(name),
+        Err(_) => MediaPlayerBuilder::new(),
+    };
+
+    Ok(Box::new(player))
 }
 
 pub struct MediaPlayerBuilder {
@@ -103,10 +148,116 @@ impl Default for MediaPlayerBuilder {
     }
 }
 
+pub struct MPRIS2 {
+    _handle: JoinHandle<()>,
+    conn: Arc<SyncConnection>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MatchRuleBuilder<'a>(MatchRule<'a>);
+
+impl<'a> MatchRuleBuilder<'a> {
+    pub fn new() -> Self {
+        MatchRuleBuilder(MatchRule::new())
+    }
+
+    pub fn with_path(mut self, path: impl Into<Path<'a>>) -> Self {
+        self.0.path = Some(path.into());
+        self
+    }
+
+    pub fn with_interface(mut self, intf: impl Into<Interface<'a>>) -> Self {
+        self.0.interface = Some(intf.into());
+        self
+    }
+
+    pub fn with_member(mut self, member: impl Into<Member<'a>>) -> Self {
+        self.0.member = Some(member.into());
+        self
+    }
+
+    pub fn build(self) -> MatchRule<'a> {
+        self.0
+    }
+}
+
+impl MPRIS2 {
+    pub fn new() -> Result<Self> {
+        let (resource, conn) = connection::new_session_sync()?;
+
+        let _handle = tokio::spawn(async {
+            let err = resource.await;
+            panic!("Lost connection to D-Bus: {}", err);
+        });
+
+        let mr = MatchRuleBuilder::new()
+            .with_path("/org/mpris/MediaPlayer2")
+            .with_interface("org.freedesktop.DBus.Properties")
+            .with_member("PropertiesChanged")
+            .build();
+
+        Ok(Self { _handle, conn })
+    }
+
+    pub async fn list_names(&self) -> Result<()> {
+        let proxy = nonblock::Proxy::new(
+            "org.freedesktop.DBus",
+            "/",
+            Duration::from_secs(2),
+            self.conn.clone(),
+        );
+
+        let (result,): (Vec<String>,) = proxy
+            .method_call("org.freedesktop.DBus", "ListNames", ())
+            .await?;
+
+        let result = result
+            .iter()
+            .filter(|name| name.starts_with("org.mpris.MediaPlayer2."))
+            .collect::<Vec<_>>();
+
+        dbg!(result);
+        Ok(())
+    }
+}
+
+impl Drop for MPRIS2 {
+    fn drop(&mut self) {
+        self._handle.abort();
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MediaPlayerRenderer {
     artist: StatefulScrollable,
     title: StatefulScrollable,
+}
+
+#[derive(Debug, Clone)]
+pub struct PlayerData {
+    artist: String,
+    title: String,
+    progress: f64,
+    status: PlaybackStatus,
+}
+
+impl TryFrom<&Progress> for PlayerData {
+    type Error = anyhow::Error;
+
+    fn try_from(p: &Progress) -> Result<Self> {
+        let meta = p.metadata();
+        let title = meta.printable_title();
+        let artist = meta.printable_artists();
+        let length = p.length().ok_or_else(|| anyhow!("Couldn't get length!"))?;
+        let current = p.position();
+        let progress = (current.as_secs_f64() / length.as_secs_f64()).clamp(0_f64, 1_f64);
+        Ok(Self {
+            artist,
+            title,
+            progress,
+            status: p.playback_status(),
+        })
+    }
 }
 
 impl MediaPlayerRenderer {
@@ -186,10 +337,17 @@ impl MediaPlayerBuilder {
     pub fn new() -> Self {
         Self::default()
     }
+}
 
+#[derive(Debug, Clone)]
+pub struct Finder {
+    name: Arc<Option<String>>,
+}
+
+impl Finder {
     pub fn connect(&self) -> Result<Player> {
         let finder = PlayerFinder::new().map_err(|e| anyhow!(e))?;
-        let player = match &self.name {
+        let player = match &*self.name {
             Some(name) => finder
                 .find_all()
                 .map_err(|e| anyhow!(e))?
@@ -200,8 +358,45 @@ impl MediaPlayerBuilder {
                 .find_active()
                 .map_err(|_| anyhow!("No active player found!")),
         }?;
-
         Ok(player)
+    }
+
+    pub fn new(name: Option<String>) -> Self {
+        Self {
+            name: Arc::new(name),
+        }
+    }
+}
+
+impl MediaPlayerBuilder {
+    async fn progress_stream(&self) -> impl Stream<Item = Result<PlayerData>> {
+        let finder = Finder::new(self.name.clone());
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<PlayerData>(10);
+        thread::spawn(move || -> Result<()> {
+            'outer: loop {
+                let player = finder.connect()?;
+                let mut tracker = player.track_progress(100).map_err(|e| anyhow!(e))?;
+
+                loop {
+                    let tick = tracker.tick();
+
+                    let data = PlayerData::try_from(tick.progress)?;
+
+                    tx.blocking_send(data)?;
+
+                    if !player.is_running() {
+                        continue 'outer;
+                    }
+                }
+            }
+            Ok(())
+        });
+
+        try_stream! {
+            while let Some(data) = rx.recv().await {
+                yield data;
+            }
+        }
     }
 }
 
@@ -216,28 +411,46 @@ impl ContentProvider for MediaPlayerBuilder {
             self.name
         );
 
-        let player = self.connect()?;
-        let ticks = self.ticks;
+        let name = Arc::new(self.name.clone());
 
-        info!("Connected to music player: {:?}", player.identity());
+        let ticks = self.ticks;
 
         let mut renderer = MediaPlayerRenderer::new()?;
 
         Ok(try_stream! {
-            // We get new meta data every 100ms to update our progress bar
-            let mut tracker = player.track_progress(ticks).map_err(|e| anyhow!(e))?;
+            let mut interval = time::interval(Duration::from_secs(RECONNECT_DELAY));
+            interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+            'outer: loop {
+                info!(
+                    "Trying to connect to DBUS with player preference: {:?}",
+                    name
+                );
+                let finder = Finder{ name: name.clone() };
+                let player = match finder.connect() {
+                    Ok(player) => player,
+                    _ => {
+                        info!("Waiting {} second(s) before trying to reconnect to D-BUS.", RECONNECT_DELAY);
+                        interval.tick().await;
+                        continue 'outer
+                    }
+                };
+                info!("Connected to music player: {:?}", player.identity());
+                // We get new meta data every 100ms to update our progress bar
+                let mut tracker = player.track_progress(ticks).map_err(|e| anyhow!(e))?;
 
-            loop {
-                let progress = tracker.tick();
+                loop {
+                    let progress = tracker.tick();
 
-                if let Ok(image) = renderer.update(progress.progress) {
-                    yield image;
-                }
+                    if let Ok(image) = renderer.update(progress.progress) {
+                        yield image;
+                    }
 
-                if !player.is_running() {
-                    // Clear the screen one last time
-                    yield FrameBuffer::new();
-
+                    if !player.is_running() {
+                        // Clear the screen one last time
+                        yield FrameBuffer::new();
+                        info!("Disconnected from MPRIS2 source");
+                        continue 'outer;
+                    }
                 }
             }
         })

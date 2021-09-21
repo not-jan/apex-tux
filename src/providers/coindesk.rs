@@ -2,13 +2,14 @@ use crate::render::{
     display::{ContentProvider, FrameBuffer},
     scheduler::{ContentWrapper, CONTENT_PROVIDERS},
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_rwlock::RwLock;
 use async_stream::try_stream;
+use config::Config;
 use embedded_graphics::{
     geometry::{OriginDimensions, Point},
     image::Image,
-    mono_font::{ascii, MonoTextStyle},
+    mono_font::{iso_8859_15, MonoTextStyle},
     pixelcolor::BinaryColor,
     text::{renderer::TextRenderer, Baseline, Text},
     Drawable,
@@ -18,7 +19,7 @@ use linkme::distributed_slice;
 use log::info;
 use reqwest::{header, Client, ClientBuilder};
 use serde::{Deserialize, Serialize};
-use std::{lazy::SyncLazy, time::Duration};
+use std::{convert::TryFrom, lazy::SyncLazy, time::Duration};
 use tinybmp::Bmp;
 use tokio::{time, time::MissedTickBehavior};
 
@@ -29,12 +30,52 @@ static BTC_BMP: SyncLazy<Bmp<BinaryColor>> = SyncLazy::new(|| {
 });
 
 #[distributed_slice(CONTENT_PROVIDERS)]
-static PROVIDER_INIT: fn() -> Result<Box<dyn ContentWrapper>> = register_callback;
+static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = register_callback;
+
+#[derive(Debug, Copy, Clone)]
+pub enum Target {
+    Eur,
+    Usd,
+    Gbp,
+}
+
+impl Default for Target {
+    fn default() -> Self {
+        Target::Usd
+    }
+}
+
+impl TryFrom<String> for Target {
+    type Error = anyhow::Error;
+
+    fn try_from(value: String) -> std::prelude::rust_2015::Result<Self, Self::Error> {
+        match value.as_str() {
+            "USD" | "usd" | "dollar" => Ok(Target::Usd),
+            "eur" | "EUR" | "euro" | "Euro" => Ok(Target::Eur),
+            "gbp" | "GBP" => Ok(Target::Gbp),
+            _ => Err(anyhow!("Unknown target currency!")),
+        }
+    }
+}
+
+impl Target {
+    pub fn format(self, price: &BitcoinPrice) -> String {
+        match self {
+            Target::Eur => format!("{}\u{20ac}", price.eur.rate),
+            Target::Usd => format!("${}", price.usd.rate),
+            Target::Gbp => format!("\u{a3}{}", price.gbp.rate),
+        }
+    }
+}
 
 #[allow(clippy::unnecessary_wraps)]
-fn register_callback() -> Result<Box<dyn ContentWrapper>> {
+fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     info!("Registering Coindesk display source.");
-    Ok(Box::new(Coindesk::new()?))
+    let currency = config
+        .get_str("crypto.currency")
+        .unwrap_or_else(|_| String::from("USD"));
+    let currency = Target::try_from(currency).unwrap_or_default();
+    Ok(Box::new(Coindesk::new(currency)?))
 }
 
 const COINDESK_URL: &str = "https://api.coindesk.com/v1/bpi/currentprice.json";
@@ -78,12 +119,12 @@ pub struct Status {
 }
 
 impl Status {
-    pub fn render(&self) -> Result<FrameBuffer> {
+    pub fn render(&self, target: Target) -> Result<FrameBuffer> {
         let mut buffer = FrameBuffer::new();
 
         // TODO: Add support for EUR and GBP since we're fetching them anyway
-        let text = format!(" ${}", self.bpi.usd.rate);
-        let style = MonoTextStyle::new(&ascii::FONT_6X13_BOLD, BinaryColor::On);
+        let text = target.format(&self.bpi);
+        let style = MonoTextStyle::new(&iso_8859_15::FONT_6X13_BOLD, BinaryColor::On);
         Image::new(
             &*BTC_BMP,
             Point::new(0, 40 / 2 - (BTC_BMP.size().height / 2) as i32),
@@ -99,32 +140,30 @@ impl Status {
 }
 
 #[derive(Debug, Clone, Default)]
-struct Coindesk(Client);
-
-impl From<Client> for Coindesk {
-    fn from(inner: Client) -> Self {
-        Self(inner)
-    }
+struct Coindesk {
+    client: Client,
+    target: Target,
 }
 
 impl Coindesk {
-    pub fn new() -> Result<Self> {
+    pub fn new(target: Target) -> Result<Self> {
         let mut headers = header::HeaderMap::new();
         headers.insert(
             header::CONTENT_TYPE,
             header::HeaderValue::from_static("application/json"),
         );
-        Ok(Coindesk(
-            ClientBuilder::new()
+        Ok(Coindesk {
+            client: ClientBuilder::new()
                 .user_agent(APP_USER_AGENT)
                 .default_headers(headers)
                 .build()?,
-        ))
+            target,
+        })
     }
 
     pub async fn fetch(&self) -> Result<Status> {
         let status = self
-            .0
+            .client
             .get(COINDESK_URL)
             .send()
             .await?
@@ -161,7 +200,7 @@ impl ContentProvider for Coindesk {
                         yield *buffer;
                     },
                     _ = refetch.tick() => {
-                        let data = self.fetch().await.and_then(|d| d.render());
+                        let data = self.fetch().await.and_then(|d| d.render(self.target));
                         let mut buffer = status.write().await;
                         if let Ok(data) = data {
                             *buffer = data;

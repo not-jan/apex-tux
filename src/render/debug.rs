@@ -19,7 +19,7 @@ use tokio::{
 };
 
 #[distributed_slice(CONTENT_PROVIDERS)]
-static PROVIDER_INIT: fn() -> Result<Box<dyn ContentWrapper>> = register_callback;
+static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = register_callback;
 
 #[allow(clippy::unnecessary_wraps)]
 fn register_callback() -> Result<Box<dyn ContentWrapper>> {

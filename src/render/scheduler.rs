@@ -7,10 +7,11 @@ use crate::{
     render::{
         display::ContentProvider,
         notifications::{Notification, NotificationProvider},
-        stream::{from_receiver, multiplex},
+        stream::multiplex,
     },
 };
-use futures::{pin_mut, select, stream, stream::Stream, StreamExt};
+use config::Config;
+use futures::{pin_mut, stream, stream::Stream, StreamExt};
 use itertools::Itertools;
 use linkme::distributed_slice;
 use log::{error, info};
@@ -21,7 +22,7 @@ use std::sync::{
 use tokio::sync::mpsc;
 
 #[distributed_slice]
-pub static CONTENT_PROVIDERS: [fn() -> Result<Box<dyn ContentWrapper>>] = [..];
+pub static CONTENT_PROVIDERS: [fn(&Config) -> Result<Box<dyn ContentWrapper>>] = [..];
 
 #[distributed_slice]
 pub static NOTIFICATION_PROVIDERS: [fn() -> Result<Box<dyn NotificationWrapper>>] = [..];
@@ -73,10 +74,10 @@ impl<T: Device> Scheduler<T> {
         Self { device }
     }
 
-    pub async fn start(&mut self, rx: mpsc::Receiver<Command>) -> Result<()> {
+    pub async fn start(&mut self, rx: mpsc::Receiver<Command>, mut config: Config) -> Result<()> {
         let mut providers = CONTENT_PROVIDERS
             .iter()
-            .map(|f| (f)())
+            .map(|f| (f)(&mut config))
             .collect::<Result<Vec<_>>>()?;
 
         let mut notifications = NOTIFICATION_PROVIDERS
@@ -97,12 +98,17 @@ impl<T: Device> Scheduler<T> {
         let current = Arc::new(AtomicUsize::new(0));
         info!("Found {} registered providers", providers.len());
 
-        let commands = from_receiver(rx).fuse();
-        pin_mut!(commands);
+        //let commands = from_receiver(rx).fuse();
+        //pin_mut!(commands);
+        pin_mut!(rx);
 
         let (providers, errors): (Vec<_>, Vec<_>) = providers
             .iter_mut()
             .map(|i| (i.provider_name(), i.proxy_stream()))
+            .filter(|(name, _)| {
+                let key = format!("{}.enabled", name);
+                config.get_bool(&key).unwrap_or(true)
+            })
             .map(|(name, i)| {
                 i.map_err(|e| anyhow!("Failed to initalize provider: {}. Error: {}", name, e))
             })
@@ -114,6 +120,7 @@ impl<T: Device> Scheduler<T> {
 
         let providers = providers
             .into_iter()
+            .into_iter()
             .map(Box::into_pin)
             .map(futures::StreamExt::fuse)
             .collect::<Vec<_>>();
@@ -122,8 +129,9 @@ impl<T: Device> Scheduler<T> {
 
         let mut y = multiplex(providers, move || z.load(Ordering::SeqCst));
         loop {
-            select! {
-                cmd = commands.next() => {
+            tokio::select! {
+                cmd = rx.recv() => {
+                    println!("Handling command queue!");
                     match cmd {
                         Some(Command::Shutdown) => break,
                         Some(Command::NextSource) => {
@@ -132,7 +140,10 @@ impl<T: Device> Scheduler<T> {
                             self.device.clear()?;
                         },
                         Some(Command::PreviousSource) => {
-                            let new = current.load(Ordering::SeqCst).wrapping_sub(1) % size;
+                            let new = match current.load(Ordering::SeqCst) {
+                                0 => size - 1,
+                                n => (n - 1) % size
+                            };
                             current.store(new, Ordering::SeqCst);
                             self.device.clear()?;
                         },
@@ -151,8 +162,7 @@ impl<T: Device> Scheduler<T> {
                     if let Some(Ok(content)) = &content {
                         self.device.draw(content)?;
                     }
-                },
-                complete => panic!("It's over!!!"),
+                }
             };
         }
 

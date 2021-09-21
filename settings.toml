@@ -1,0 +1,15 @@
+[clock]
+enabled = true
+# Enables a twelve hour clock instead of the 24hr one
+twelve_hour = false
+
+[mpris2]
+enabled = true
+# Set this so web browsers like Firefox or Chrome don't steal the focus of your real music player
+preferred_player = "Lollypop"
+
+[crypto]
+enabled = true
+# Valid choices are "gbp", "usd" and "eur"
+# Default is USD
+currency = "eur"

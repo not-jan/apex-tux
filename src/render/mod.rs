@@ -1,3 +1,4 @@
+#[cfg(feature = "debug")]
 pub(crate) mod debug;
 pub(crate) mod display;
 pub(crate) mod notifications;

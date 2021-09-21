@@ -8,6 +8,7 @@ use crate::{
 use anyhow::Result;
 use async_stream::try_stream;
 use chrono::{DateTime, Local};
+use config::Config;
 use embedded_graphics::{
     geometry::Point,
     mono_font::{ascii, MonoTextStyle},
@@ -24,12 +25,15 @@ use tokio::{
 };
 
 #[distributed_slice(CONTENT_PROVIDERS)]
-static PROVIDER_INIT: fn() -> Result<Box<dyn ContentWrapper>> = register_callback;
+static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = register_callback;
 
 #[allow(clippy::unnecessary_wraps)]
-fn register_callback() -> Result<Box<dyn ContentWrapper>> {
+fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     info!("Registering Clock display source.");
-    Ok(Box::new(Clock { twelve_hour: true }))
+
+    let twelve_hour = config.get_bool("clock.twelve_hour").unwrap_or(false);
+
+    Ok(Box::new(Clock { twelve_hour }))
 }
 
 struct Clock {

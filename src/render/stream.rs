@@ -1,14 +1,13 @@
-use async_stream::stream;
 use futures::{
     stream::{FusedStream, StreamExt},
     Stream,
 };
+use log::info;
 use pin_project_lite::pin_project;
 use std::{
     pin::Pin,
     task::{Context, Poll},
 };
-use tokio::sync::mpsc;
 
 pin_project! {
     #[must_use = "streams do nothing unless polled"]
@@ -32,14 +31,6 @@ where
     }
 
     Multiplexer { inner: set, f }
-}
-
-pub fn from_receiver<Item>(mut rx: mpsc::Receiver<Item>) -> impl Stream<Item = Item> {
-    stream! {
-        while let Some(item) = rx.recv().await {
-            yield item;
-        }
-    }
 }
 
 impl<St, F> Stream for Multiplexer<St, F>
@@ -67,7 +58,10 @@ where
     F: FnMut() -> usize,
 {
     fn is_terminated(&self) -> bool {
-        self.inner.iter().all(|st| st.is_terminated())
+        let x = self.inner.iter().all(|st| st.is_terminated());
+
+        dbg!(&x);
+        x
     }
 }
 
