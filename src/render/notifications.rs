@@ -9,18 +9,17 @@ use embedded_graphics::{
 };
 use num_traits::AsPrimitive;
 
-use crate::{
-    dbus::notifications::ProgressBar,
-    render::{
-        scheduler::{TICKS_PER_SECOND, TICK_LENGTH},
-        text::{Scrollable, ScrollableBuilder},
-    },
+use crate::render::{
+    scheduler::{TICKS_PER_SECOND, TICK_LENGTH},
+    text::{Scrollable, ScrollableBuilder},
+    util::ProgressBar,
 };
 use embedded_graphics::{
     mono_font::{ascii, MonoFont, MonoTextStyle},
     text::Text,
 };
 use futures_core::stream::Stream;
+
 use tinybmp::Bmp;
 use tokio::{
     time,

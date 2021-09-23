@@ -27,15 +27,16 @@ use config::Config;
 use dbus::{
     message::MatchRule,
     nonblock,
-    nonblock::SyncConnection,
+    nonblock::{MsgMatch, SyncConnection},
     strings::{Interface, Member},
-    Path,
+    MessageType, Path,
 };
 use dbus_tokio::connection;
 use embedded_graphics::{
     mono_font::{ascii, MonoTextStyle},
     text::{Baseline, Text},
 };
+use futures::StreamExt;
 use std::{
     convert::{TryFrom, TryInto},
     future::Future,
@@ -151,6 +152,8 @@ impl Default for MediaPlayerBuilder {
 pub struct MPRIS2 {
     _handle: JoinHandle<()>,
     conn: Arc<SyncConnection>,
+    _msg: MsgMatch,
+    _msg_other: MsgMatch,
 }
 
 #[derive(Debug, Clone)]
@@ -176,13 +179,18 @@ impl<'a> MatchRuleBuilder<'a> {
         self
     }
 
+    pub fn with_type(mut self, ty: MessageType) -> Self {
+        self.0.msg_type = Some(ty);
+        self
+    }
+
     pub fn build(self) -> MatchRule<'a> {
         self.0
     }
 }
 
 impl MPRIS2 {
-    pub fn new() -> Result<Self> {
+    pub async fn new() -> Result<Self> {
         let (resource, conn) = connection::new_session_sync()?;
 
         let _handle = tokio::spawn(async {
@@ -195,8 +203,37 @@ impl MPRIS2 {
             .with_interface("org.freedesktop.DBus.Properties")
             .with_member("PropertiesChanged")
             .build();
+        let (_msg_other, mut stream) = conn.add_match(mr).await?.msg_stream();
 
-        Ok(Self { _handle, conn })
+        tokio::spawn(async move {
+            while let Some(message) = stream.next().await {
+                dbg!(&message);
+                let x = message.get_items();
+                let item = x.get(1);
+                dbg!(&item);
+            }
+        });
+
+        let mr = MatchRuleBuilder::new()
+            .with_interface("org.mpris.MediaPlayer2.Player")
+            .with_path("/org/mpris/MediaPlayer2")
+            .with_member("Seeked")
+            .build();
+
+        let (_msg, mut stream) = conn.add_match(mr).await?.msg_stream();
+
+        tokio::spawn(async move {
+            while let Some(message) = stream.next().await {
+                dbg!(&message);
+            }
+        });
+
+        Ok(Self {
+            _handle,
+            conn,
+            _msg,
+            _msg_other,
+        })
     }
 
     pub async fn list_names(&self) -> Result<()> {

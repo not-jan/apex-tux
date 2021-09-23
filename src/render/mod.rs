@@ -5,3 +5,4 @@ pub(crate) mod notifications;
 pub(crate) mod scheduler;
 pub(crate) mod stream;
 pub(crate) mod text;
+pub(crate) mod util;

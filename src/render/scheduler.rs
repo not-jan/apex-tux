@@ -131,7 +131,6 @@ impl<T: Device> Scheduler<T> {
         loop {
             tokio::select! {
                 cmd = rx.recv() => {
-                    println!("Handling command queue!");
                     match cmd {
                         Some(Command::Shutdown) => break,
                         Some(Command::NextSource) => {

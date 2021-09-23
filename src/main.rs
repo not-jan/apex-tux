@@ -30,6 +30,8 @@
     unused_qualifications
 )]
 
+extern crate embedded_graphics;
+
 use anyhow::Result;
 
 #[cfg(feature = "dbus-support")]
@@ -50,7 +52,6 @@ use crate::hardware::simulator::Simulator;
 use crate::hardware::usb::USBDevice;
 
 use crate::{
-    dbus::mpris2::MPRIS2,
     hardware::device::Device,
     render::{scheduler, scheduler::Scheduler},
 };
