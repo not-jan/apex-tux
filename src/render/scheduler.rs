@@ -90,11 +90,14 @@ impl<T: Device> Scheduler<T> {
             .map(|s| s.proxy_stream().map(Box::into_pin))
             .partition_result();
 
+        dbg!(notifications.len());
+
         for e in errors {
             error!("{}", e);
         }
 
         let mut notifications = stream::select_all(notifications.into_iter());
+        dbg!(notifications.len());
         let current = Arc::new(AtomicUsize::new(0));
         info!("Found {} registered providers", providers.len());
 
@@ -110,7 +113,7 @@ impl<T: Device> Scheduler<T> {
                 config.get_bool(&key).unwrap_or(true)
             })
             .map(|(name, i)| {
-                i.map_err(|e| anyhow!("Failed to initalize provider: {}. Error: {}", name, e))
+                i.map_err(|e| anyhow!("Failed to initialize provider: {}. Error: {}", name, e))
             })
             .partition_result();
 
@@ -149,7 +152,7 @@ impl<T: Device> Scheduler<T> {
                         _ => {}
                     }
                 },
-                notification = notifications.next() => {
+                notification = notifications.next(), if notifications.len() > 0 => {
                     if let Some(Ok(mut notification)) = notification {
                         let mut stream = Box::pin(notification.stream()?);
                         while let Some(display) = stream.next().await {

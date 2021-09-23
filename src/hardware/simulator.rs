@@ -3,11 +3,14 @@ use crate::{
     render::{display::FrameBuffer, scheduler},
 };
 use anyhow::Result;
-use embedded_graphics::{geometry::Size, pixelcolor::BinaryColor, Drawable};
+use embedded_graphics::{
+    geometry::Size, iterator::PixelIteratorExt, pixelcolor::BinaryColor, Drawable,
+};
 use embedded_graphics_simulator::{
     sdl2::Keycode, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
-use std::{sync::mpsc, thread, thread::JoinHandle};
+use log::info;
+use std::{sync::mpsc, thread, thread::JoinHandle, time::Duration};
 
 static WINDOW_TITLE: &str = concat!(
     env!("CARGO_PKG_NAME"),
@@ -30,24 +33,31 @@ impl Simulator {
             let output_settings = OutputSettingsBuilder::new().scale(4).build();
             let mut window = Window::new(WINDOW_TITLE, &output_settings);
 
-            while let Ok(image) = rx.recv() {
-                image.draw(&mut display)?;
+            'outer: loop {
+                if let Ok(image) = rx.recv_timeout(Duration::from_millis(10)) {
+                    image.draw(&mut display)?;
+                }
 
                 window.update(&display);
 
-                window.events().try_for_each(|e| match e {
-                    SimulatorEvent::KeyUp { keycode, .. } => {
-                        if keycode == Keycode::Left {
-                            sender.blocking_send(scheduler::Command::PreviousSource)
-                        } else if keycode == Keycode::Right {
-                            sender.blocking_send(scheduler::Command::NextSource)
-                        } else {
-                            Ok(())
+                for x in window.events() {
+                    match x {
+                        SimulatorEvent::KeyUp { keycode, .. } => {
+                            if keycode == Keycode::Left {
+                                sender.blocking_send(scheduler::Command::PreviousSource)
+                            } else if keycode == Keycode::Right {
+                                sender.blocking_send(scheduler::Command::NextSource)
+                            } else {
+                                Ok(())
+                            }
                         }
-                    }
-                    SimulatorEvent::Quit => sender.blocking_send(scheduler::Command::Shutdown),
-                    _ => Ok(()),
-                })?;
+                        SimulatorEvent::Quit => {
+                            sender.blocking_send(scheduler::Command::Shutdown)?;
+                            break 'outer;
+                        }
+                        _ => Ok(()),
+                    }?;
+                }
             }
 
             Ok(())

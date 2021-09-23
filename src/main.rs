@@ -65,7 +65,7 @@ pub async fn main() -> Result<()> {
     SimpleLogger::init(LevelFilter::Info, LoggerConfig::default())?;
 
     // This channel is used to send commands to the scheduler
-    let (tx, rx) = mpsc::channel::<scheduler::Command>(10);
+    let (tx, rx) = mpsc::channel::<scheduler::Command>(100);
 
     #[cfg(feature = "usb")]
     let mut device = USBDevice::try_connect(tx.clone())?;
