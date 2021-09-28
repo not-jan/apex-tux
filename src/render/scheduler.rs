@@ -90,19 +90,15 @@ impl<T: Device> Scheduler<T> {
             .map(|s| s.proxy_stream().map(Box::into_pin))
             .partition_result();
 
-        dbg!(notifications.len());
-
         for e in errors {
             error!("{}", e);
         }
 
         let mut notifications = stream::select_all(notifications.into_iter());
-        dbg!(notifications.len());
+
         let current = Arc::new(AtomicUsize::new(0));
         info!("Found {} registered providers", providers.len());
 
-        //let commands = from_receiver(rx).fuse();
-        //pin_mut!(commands);
         pin_mut!(rx);
 
         let (providers, errors): (Vec<_>, Vec<_>) = providers

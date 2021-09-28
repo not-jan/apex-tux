@@ -58,10 +58,7 @@ where
     F: FnMut() -> usize,
 {
     fn is_terminated(&self) -> bool {
-        let x = self.inner.iter().all(|st| st.is_terminated());
-
-        dbg!(&x);
-        x
+        self.inner.iter().all(|st| st.is_terminated())
     }
 }
 

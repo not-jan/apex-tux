@@ -11,7 +11,8 @@
     const_generics_defaults,
     box_into_pin,
     async_closure,
-    async_stream
+    async_stream,
+    decl_macro
 )]
 #![warn(clippy::pedantic)]
 // `clippy::mut_mut` is disabled because `futures::stream::select!` causes the lint to fire
@@ -59,6 +60,9 @@ use log::{info, LevelFilter};
 use simplelog::{Config as LoggerConfig, SimpleLogger};
 use tokio::sync::mpsc;
 
+#[cfg(all(feature = "http", target_family = "windows"))]
+use crate::hardware::http::SteelseriesEngine;
+
 #[tokio::main]
 #[allow(clippy::missing_errors_doc)]
 pub async fn main() -> Result<()> {
@@ -67,8 +71,11 @@ pub async fn main() -> Result<()> {
     // This channel is used to send commands to the scheduler
     let (tx, rx) = mpsc::channel::<scheduler::Command>(100);
 
-    #[cfg(feature = "usb")]
+    #[cfg(all(feature = "usb", target_family = "unix"))]
     let mut device = USBDevice::try_connect(tx.clone())?;
+
+    #[cfg(all(feature = "http", target_family = "windows"))]
+    let mut device = SteelseriesEngine::try_connect().await?;
 
     let mut settings = config::Config::default();
     settings

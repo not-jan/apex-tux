@@ -36,7 +36,7 @@ use embedded_graphics::{
     mono_font::{ascii, MonoTextStyle},
     text::{Baseline, Text},
 };
-use futures::StreamExt;
+use futures::{StreamExt, TryStreamExt};
 use std::{
     convert::{TryFrom, TryInto},
     future::Future,
@@ -152,8 +152,8 @@ impl Default for MediaPlayerBuilder {
 pub struct MPRIS2 {
     _handle: JoinHandle<()>,
     conn: Arc<SyncConnection>,
-    _msg: MsgMatch,
-    _msg_other: MsgMatch,
+    _seek_match: MsgMatch,
+    _meta_match: MsgMatch,
 }
 
 #[derive(Debug, Clone)]
@@ -203,16 +203,8 @@ impl MPRIS2 {
             .with_interface("org.freedesktop.DBus.Properties")
             .with_member("PropertiesChanged")
             .build();
-        let (_msg_other, mut stream) = conn.add_match(mr).await?.msg_stream();
 
-        tokio::spawn(async move {
-            while let Some(message) = stream.next().await {
-                dbg!(&message);
-                let x = message.get_items();
-                let item = x.get(1);
-                dbg!(&item);
-            }
-        });
+        let (_meta_match, mut meta_stream) = conn.add_match(mr).await?.msg_stream();
 
         let mr = MatchRuleBuilder::new()
             .with_interface("org.mpris.MediaPlayer2.Player")
@@ -220,19 +212,26 @@ impl MPRIS2 {
             .with_member("Seeked")
             .build();
 
-        let (_msg, mut stream) = conn.add_match(mr).await?.msg_stream();
+        let (_seek_match, mut seek_stream) = conn.add_match(mr).await?.msg_stream();
 
         tokio::spawn(async move {
-            while let Some(message) = stream.next().await {
-                dbg!(&message);
+            loop {
+                tokio::select! {
+                    seeked = seek_stream.next() => {
+
+                    }
+                    meta = meta_stream.next() => {
+                        info!("new metadata: {:?}", meta);
+                    }
+                }
             }
         });
 
         Ok(Self {
             _handle,
             conn,
-            _msg,
-            _msg_other,
+            _seek_match,
+            _meta_match,
         })
     }
 
