@@ -2,7 +2,6 @@ use futures::{
     stream::{FusedStream, StreamExt},
     Stream,
 };
-use log::info;
 use pin_project_lite::pin_project;
 use std::{
     pin::Pin,
@@ -58,7 +57,7 @@ where
     F: FnMut() -> usize,
 {
     fn is_terminated(&self) -> bool {
-        self.inner.iter().all(|st| st.is_terminated())
+        self.inner.iter().all(FusedStream::is_terminated)
     }
 }
 

@@ -11,11 +11,11 @@ use embedded_graphics::{
 };
 use futures_core::stream::Stream;
 use linkme::distributed_slice;
-use mpris::{Metadata, PlaybackStatus, Player, PlayerFinder, Progress};
 
+use async_stream::stream;
 use log::info;
 use tinybmp::Bmp;
-use tokio::{task, time};
+use tokio::time;
 
 use crate::render::{
     scheduler::CONTENT_PROVIDERS,
@@ -24,30 +24,23 @@ use crate::render::{
 
 use crate::render::scheduler::ContentWrapper;
 use config::Config;
-use dbus::{
-    message::MatchRule,
-    nonblock,
-    nonblock::{MsgMatch, SyncConnection},
-    strings::{Interface, Member},
-    MessageType, Path,
-};
+use dbus::{message::MatchRule, nonblock, nonblock::SyncConnection};
 use dbus_tokio::connection;
 use embedded_graphics::{
     mono_font::{ascii, MonoTextStyle},
     text::{Baseline, Text},
 };
-use futures::{StreamExt, TryStreamExt};
-use std::{
-    convert::{TryFrom, TryInto},
-    future::Future,
-    lazy::SyncLazy,
-    sync::Arc,
-    thread,
-};
+use futures::StreamExt;
+use std::{convert::TryInto, lazy::SyncLazy, sync::Arc};
 use tokio::{
     task::JoinHandle,
     time::{Duration, MissedTickBehavior},
 };
+
+use crate::generated::mpris2_player::MediaPlayer2Player;
+use dbus::{arg::PropMap, nonblock::Proxy, strings::BusName};
+use futures::pin_mut;
+use std::mem::drop;
 
 static NOTE_ICON: &[u8] = include_bytes!("./../../assets/note.bmp");
 static PAUSE_ICON: &[u8] = include_bytes!("./../../assets/pause.bmp");
@@ -133,59 +126,113 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     Ok(Box::new(player))
 }
 
+#[derive(Debug, Clone, Default)]
 pub struct MediaPlayerBuilder {
     /// If a preference for the player is wanted specify this field
-    name: Option<String>,
-    /// Interval to re-poll data about the music player in ms
-    ticks: u32,
-}
-
-impl Default for MediaPlayerBuilder {
-    fn default() -> Self {
-        Self {
-            name: None,
-            ticks: 100,
-        }
-    }
+    name: Option<Arc<String>>,
 }
 
 pub struct MPRIS2 {
-    _handle: JoinHandle<()>,
+    handle: JoinHandle<()>,
     conn: Arc<SyncConnection>,
-    _seek_match: MsgMatch,
-    _meta_match: MsgMatch,
 }
 
-#[derive(Debug, Clone)]
-pub struct MatchRuleBuilder<'a>(MatchRule<'a>);
+// Ok so the plan for the MPRIS2 module is to wait for two DBUS events
+// - PropertiesChanged to see if the song changed
+// - Seeked to see if the progress was changed manually
+// There's an existing mpris2 crate but it doesn't support async operation which
+// is kind of painful to use in this architecture.
+// When we received these events they should be mapped and put into another
+// queue. Upon receiving the event our code should pull the metadata from the
+// player.
 
-impl<'a> MatchRuleBuilder<'a> {
-    pub fn new() -> Self {
-        MatchRuleBuilder(MatchRule::new())
+#[derive(Clone, Debug)]
+pub enum PlayerEvent {
+    Seeked,
+    Properties,
+    Timer,
+}
+
+#[derive(Debug)]
+pub struct _Metadata(PropMap);
+
+impl _Metadata {
+    pub fn title(&self) -> Result<String> {
+        ::dbus::arg::prop_cast::<String>(&self.0, "xesam:title")
+            .cloned()
+            .ok_or_else(|| anyhow!("Couldn't get title!"))
     }
 
-    pub fn with_path(mut self, path: impl Into<Path<'a>>) -> Self {
-        self.0.path = Some(path.into());
-        self
+    pub fn artists(&self) -> Result<String> {
+        Ok(
+            ::dbus::arg::prop_cast::<Vec<String>>(&self.0, "xesam:artist")
+                .ok_or_else(|| anyhow!("Couldn't get artist!"))?
+                .join(", "),
+        )
     }
 
-    pub fn with_interface(mut self, intf: impl Into<Interface<'a>>) -> Self {
-        self.0.interface = Some(intf.into());
-        self
+    pub fn length(&self) -> Result<i64> {
+        ::dbus::arg::prop_cast::<i64>(&self.0, "mpris:length")
+            .copied()
+            .ok_or_else(|| anyhow!("Couldn't get length!"))
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum PlaybackStatus {
+    Stopped,
+    Paused,
+    Playing,
+}
+
+pub struct Progress {
+    metadata: _Metadata,
+    position: i64,
+    status: PlaybackStatus,
+}
+
+#[derive(Clone)]
+pub struct Player<'a>(Proxy<'a, Arc<SyncConnection>>);
+
+impl<'a> Player<'a> {
+    pub fn new(path: impl Into<BusName<'a>>, conn: Arc<SyncConnection>) -> Self {
+        Self(nonblock::Proxy::new(
+            path.into(),
+            "/org/mpris/MediaPlayer2",
+            Duration::from_secs(2),
+            conn,
+        ))
     }
 
-    pub fn with_member(mut self, member: impl Into<Member<'a>>) -> Self {
-        self.0.member = Some(member.into());
-        self
+    pub async fn metadata(&self) -> Result<_Metadata> {
+        Ok(_Metadata(self.0.metadata().await?))
     }
 
-    pub fn with_type(mut self, ty: MessageType) -> Self {
-        self.0.msg_type = Some(ty);
-        self
+    pub async fn position(&self) -> Result<i64> {
+        Ok(self.0.position().await?)
     }
 
-    pub fn build(self) -> MatchRule<'a> {
-        self.0
+    pub async fn progress(&self) -> Result<Progress> {
+        Ok(Progress {
+            metadata: self.metadata().await?,
+            position: self.position().await?,
+            status: self.playback_status().await?,
+        })
+    }
+
+    pub fn name(&self) -> String {
+        self.0.destination.to_string()
+    }
+
+    pub async fn playback_status(&self) -> Result<PlaybackStatus> {
+        let status = self.0.playback_status().await?;
+
+        match status.as_str() {
+            "Playing" => Ok(PlaybackStatus::Playing),
+            "Paused" => Ok(PlaybackStatus::Paused),
+            "Stopped" => Ok(PlaybackStatus::Stopped),
+            _ => Err(anyhow!("Bad playback status!")),
+        }
     }
 }
 
@@ -193,49 +240,59 @@ impl MPRIS2 {
     pub async fn new() -> Result<Self> {
         let (resource, conn) = connection::new_session_sync()?;
 
-        let _handle = tokio::spawn(async {
+        let handle = tokio::spawn(async {
             let err = resource.await;
             panic!("Lost connection to D-Bus: {}", err);
         });
 
-        let mr = MatchRuleBuilder::new()
+        Ok(Self { handle, conn })
+    }
+
+    pub async fn stream(&self) -> Result<impl Stream<Item = PlayerEvent>> {
+        let mr = MatchRule::new()
             .with_path("/org/mpris/MediaPlayer2")
             .with_interface("org.freedesktop.DBus.Properties")
-            .with_member("PropertiesChanged")
-            .build();
+            .with_member("PropertiesChanged");
 
-        let (_meta_match, mut meta_stream) = conn.add_match(mr).await?.msg_stream();
+        let (meta_match, mut meta_stream) = self.conn.add_match(mr).await?.msg_stream();
 
-        let mr = MatchRuleBuilder::new()
+        let mr = MatchRule::new()
             .with_interface("org.mpris.MediaPlayer2.Player")
             .with_path("/org/mpris/MediaPlayer2")
-            .with_member("Seeked")
-            .build();
+            .with_member("Seeked");
 
-        let (_seek_match, mut seek_stream) = conn.add_match(mr).await?.msg_stream();
+        let (seek_match, mut seek_stream) = self.conn.add_match(mr).await?.msg_stream();
 
-        tokio::spawn(async move {
+        Ok(stream! {
             loop {
-                tokio::select! {
-                    seeked = seek_stream.next() => {
+                let mut timer = time::interval(time::Duration::from_millis(100));
+                timer.set_missed_tick_behavior(MissedTickBehavior::Skip);
+                // First timer tick elapses instantaneously
+                timer.tick().await;
 
-                    }
-                    meta = meta_stream.next() => {
-                        info!("new metadata: {:?}", meta);
+                tokio::select! {
+                    msg = seek_stream.next() => {
+                        if let Some(_) = msg {
+                            yield PlayerEvent::Seeked;
+                        }
+                    },
+                    msg = meta_stream.next() => {
+                        if let Some(_) = msg {
+                            yield PlayerEvent::Properties;
+                        }
+                    },
+                    _ = timer.tick() => {
+                        yield PlayerEvent::Timer;
                     }
                 }
             }
-        });
-
-        Ok(Self {
-            _handle,
-            conn,
-            _seek_match,
-            _meta_match,
+            // The signal handler will unregister if those two are dropped so we never drop them ;)
+            drop(seek_match);
+            drop(meta_match);
         })
     }
 
-    pub async fn list_names(&self) -> Result<()> {
+    pub async fn list_names(&self) -> Result<Vec<String>> {
         let proxy = nonblock::Proxy::new(
             "org.freedesktop.DBus",
             "/",
@@ -250,16 +307,57 @@ impl MPRIS2 {
         let result = result
             .iter()
             .filter(|name| name.starts_with("org.mpris.MediaPlayer2."))
+            .cloned()
             .collect::<Vec<_>>();
 
-        dbg!(result);
-        Ok(())
+        Ok(result)
+    }
+
+    pub async fn wait_for_player(&self, name: Option<Arc<String>>) -> Result<Player<'_>> {
+        let mut interval = time::interval(Duration::from_secs(5));
+        interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
+        let name = name.map(|n| n.to_string());
+
+        // TODO: Instead of having a hard delay we might be able to wait on a
+        // notification from DBus instead?
+
+        loop {
+            let names = self.list_names().await?;
+
+            if let Some(name) = &name {
+                // We have a player preference, let's check if it exists
+                if let Some(player) = names.into_iter().find(|p| p.contains(name)) {
+                    // Hell yeah, we found a player
+                    return Ok(Player::new(player, self.conn.clone()));
+                }
+            } else {
+                // Let's try to find a player that's either playing or paused
+                for name in names {
+                    let player = Player::new(name, self.conn.clone());
+
+                    match player.playback_status().await {
+                        // Something is playing or paused right now, let's use that
+                        Ok(PlaybackStatus::Playing | PlaybackStatus::Paused) => {
+                            return Ok(player);
+                        }
+                        // Stopped players could be remnants of browser tabs that were playing in
+                        // the past but are dead now and we'd just get stuck here.
+                        _ => {
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            interval.tick().await;
+        }
     }
 }
 
 impl Drop for MPRIS2 {
     fn drop(&mut self) {
-        self._handle.abort();
+        self.handle.abort();
     }
 }
 
@@ -267,33 +365,6 @@ impl Drop for MPRIS2 {
 pub struct MediaPlayerRenderer {
     artist: StatefulScrollable,
     title: StatefulScrollable,
-}
-
-#[derive(Debug, Clone)]
-pub struct PlayerData {
-    artist: String,
-    title: String,
-    progress: f64,
-    status: PlaybackStatus,
-}
-
-impl TryFrom<&Progress> for PlayerData {
-    type Error = anyhow::Error;
-
-    fn try_from(p: &Progress) -> Result<Self> {
-        let meta = p.metadata();
-        let title = meta.printable_title();
-        let artist = meta.printable_artists();
-        let length = p.length().ok_or_else(|| anyhow!("Couldn't get length!"))?;
-        let current = p.position();
-        let progress = (current.as_secs_f64() / length.as_secs_f64()).clamp(0_f64, 1_f64);
-        Ok(Self {
-            artist,
-            title,
-            progress,
-            status: p.playback_status(),
-        })
-    }
 }
 
 impl MediaPlayerRenderer {
@@ -316,19 +387,19 @@ impl MediaPlayerRenderer {
     }
 
     pub fn update(&mut self, progress: &Progress) -> Result<FrameBuffer> {
-        let mut display = match progress.playback_status() {
+        let mut display = match progress.status {
             PlaybackStatus::Playing => *PLAY_TEMPLATE,
             PlaybackStatus::Paused | PlaybackStatus::Stopped => *PAUSE_TEMPLATE,
         };
 
-        let metadata = progress.metadata();
-        let length = progress
+        let metadata = &progress.metadata;
+        let length = metadata
             .length()
-            .ok_or_else(|| anyhow!("Couldn't get length!"))?;
+            .map_err(|_| anyhow!("Couldn't get length!"))? as f64;
 
-        let current = progress.position();
+        let current = progress.position as f64;
 
-        let completion = (current.as_secs_f64() / length.as_secs_f64()).clamp(0_f64, 1_f64);
+        let completion = (current / length).clamp(0_f64, 1_f64);
 
         let pixels = (128_f64 - 2_f64 * 3_f64) * completion;
         let style = PrimitiveStyle::with_stroke(BinaryColor::On, 3);
@@ -336,8 +407,8 @@ impl MediaPlayerRenderer {
             .into_styled(style)
             .draw(&mut display)?;
 
-        let artists = metadata.printable_artists();
-        let title = metadata.printable_title();
+        let artists = metadata.artists()?;
+        let title = metadata.title()?;
 
         if let Ok(false) = self.artist.update(&artists) {
             if artists.len() > 16 {
@@ -360,79 +431,12 @@ impl MediaPlayerRenderer {
 
 impl MediaPlayerBuilder {
     pub fn with_player_name(mut self, name: impl Into<String>) -> Self {
-        self.name = Some(name.into());
-        self
-    }
-
-    #[allow(dead_code)]
-    pub fn with_custom_interval(mut self, interval: u32) -> Self {
-        self.ticks = interval;
+        self.name = Some(Arc::new(name.into()));
         self
     }
 
     pub fn new() -> Self {
         Self::default()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Finder {
-    name: Arc<Option<String>>,
-}
-
-impl Finder {
-    pub fn connect(&self) -> Result<Player> {
-        let finder = PlayerFinder::new().map_err(|e| anyhow!(e))?;
-        let player = match &*self.name {
-            Some(name) => finder
-                .find_all()
-                .map_err(|e| anyhow!(e))?
-                .into_iter()
-                .find(|player| player.identity() == name)
-                .ok_or_else(|| anyhow!("Player {:?} not found!", name)),
-            None => finder
-                .find_active()
-                .map_err(|_| anyhow!("No active player found!")),
-        }?;
-        Ok(player)
-    }
-
-    pub fn new(name: Option<String>) -> Self {
-        Self {
-            name: Arc::new(name),
-        }
-    }
-}
-
-impl MediaPlayerBuilder {
-    async fn progress_stream(&self) -> impl Stream<Item = Result<PlayerData>> {
-        let finder = Finder::new(self.name.clone());
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<PlayerData>(10);
-        thread::spawn(move || -> Result<()> {
-            'outer: loop {
-                let player = finder.connect()?;
-                let mut tracker = player.track_progress(100).map_err(|e| anyhow!(e))?;
-
-                loop {
-                    let tick = tracker.tick();
-
-                    let data = PlayerData::try_from(tick.progress)?;
-
-                    tx.blocking_send(data)?;
-
-                    if !player.is_running() {
-                        continue 'outer;
-                    }
-                }
-            }
-            Ok(())
-        });
-
-        try_stream! {
-            while let Some(data) = rx.recv().await {
-                yield data;
-            }
-        }
     }
 }
 
@@ -447,44 +451,36 @@ impl ContentProvider for MediaPlayerBuilder {
             self.name
         );
 
-        let name = Arc::new(self.name.clone());
-
-        let ticks = self.ticks;
-
         let mut renderer = MediaPlayerRenderer::new()?;
 
         Ok(try_stream! {
+            let mpris = MPRIS2::new().await?;
+            pin_mut!(mpris);
+
             let mut interval = time::interval(Duration::from_secs(RECONNECT_DELAY));
             interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
             'outer: loop {
                 info!(
                     "Trying to connect to DBUS with player preference: {:?}",
-                    name
+                    self.name
                 );
-                let finder = Finder{ name: name.clone() };
-                let player = match finder.connect() {
-                    Ok(player) => player,
-                    _ => {
-                        info!("Waiting {} second(s) before trying to reconnect to D-BUS.", RECONNECT_DELAY);
-                        interval.tick().await;
-                        continue 'outer
-                    }
-                };
-                info!("Connected to music player: {:?}", player.identity());
-                // We get new meta data every 100ms to update our progress bar
-                let mut tracker = player.track_progress(ticks).map_err(|e| anyhow!(e))?;
+                yield *IDLE_TEMPLATE;
+                let player = mpris.wait_for_player(self.name.clone()).await?;
 
-                loop {
-                    let progress = tracker.tick();
+                info!("Connected to music player: {:?}", player.name());
 
-                    if let Ok(image) = renderer.update(progress.progress) {
-                        yield image;
-                    }
 
-                    if !player.is_running() {
-                        // Clear the screen one last time
-                        yield FrameBuffer::new();
-                        info!("Disconnected from MPRIS2 source");
+                let tracker = mpris.stream().await?;
+                pin_mut!(tracker);
+
+                while let Some(_) = tracker.next().await {
+                    // TODO: We could probably save *some* resources here by making use of the event
+                    // that's being called but I don't see enough of a reason to do so at the moment
+                    if let Ok(progress) = player.progress().await {
+                        if let Ok(image) = renderer.update(&progress) {
+                            yield image;
+                        }
+                    } else {
                         continue 'outer;
                     }
                 }
@@ -494,26 +490,5 @@ impl ContentProvider for MediaPlayerBuilder {
 
     fn name(&self) -> &'static str {
         "mpris2"
-    }
-}
-
-/// Helper trait to simplify collecting metadata from MPRIS2 players
-trait MetadataExt {
-    /// Collect all artists comma separated as a string or return a default
-    /// value
-    fn printable_artists(&self) -> String;
-    /// Return the title of the current song or a default value
-    fn printable_title(&self) -> String;
-}
-
-impl MetadataExt for Metadata {
-    fn printable_artists(&self) -> String {
-        self.artists()
-            .unwrap_or_else(|| vec![UNKNOWN_ARTIST])
-            .join(", ")
-    }
-
-    fn printable_title(&self) -> String {
-        self.title().unwrap_or(UNKNOWN_TITLE).to_string()
     }
 }

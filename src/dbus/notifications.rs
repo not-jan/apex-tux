@@ -16,14 +16,7 @@ use dbus::{
     Message,
 };
 use dbus_tokio::connection;
-use embedded_graphics::{
-    draw_target::DrawTarget,
-    geometry::AngleUnit,
-    pixelcolor::BinaryColor,
-    prelude::{Angle, Point, Primitive},
-    primitives::{Arc, PrimitiveStyle},
-    Drawable,
-};
+use embedded_graphics::pixelcolor::BinaryColor;
 use futures::{channel::mpsc, StreamExt};
 use futures_core::Stream;
 use linkme::distributed_slice;
@@ -45,7 +38,6 @@ static DISCORD_ICON: &[u8] = include_bytes!("./../../assets/discord.bmp");
 
 static DISCORD_ICON_BMP: SyncLazy<Bmp<BinaryColor>> =
     SyncLazy::new(|| Bmp::<BinaryColor>::from_slice(DISCORD_ICON).expect("Failed to parse BMP"));
-
 
 pub struct Dbus {}
 

@@ -34,6 +34,7 @@
 extern crate embedded_graphics;
 
 use anyhow::Result;
+use log::warn;
 
 #[cfg(feature = "dbus-support")]
 mod dbus;
@@ -59,6 +60,9 @@ use crate::{
 use log::{info, LevelFilter};
 use simplelog::{Config as LoggerConfig, SimpleLogger};
 use tokio::sync::mpsc;
+
+#[cfg(feature = "dbus-support")]
+mod generated;
 
 #[cfg(all(feature = "http", target_family = "windows"))]
 use crate::hardware::http::SteelseriesEngine;

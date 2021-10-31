@@ -148,7 +148,7 @@ impl<T: Device> Scheduler<T> {
                         _ => {}
                     }
                 },
-                notification = notifications.next(), if notifications.len() > 0 => {
+                notification = notifications.next(), if !notifications.is_empty() => {
                     if let Some(Ok(mut notification)) = notification {
                         let mut stream = Box::pin(notification.stream()?);
                         while let Some(display) = stream.next().await {

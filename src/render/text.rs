@@ -168,7 +168,7 @@ impl ScrollableBuilder {
 
     pub fn build(&self) -> Result<Scrollable> {
         let renderer = MonoTextStyleBuilder::new()
-            .font(self.font.unwrap_or_else(|| Self::default_font()))
+            .font(self.font.unwrap_or_else(Self::default_font))
             .text_color(BinaryColor::On)
             .build();
         let size = self.calculate_size(&renderer);
