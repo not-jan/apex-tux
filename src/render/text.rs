@@ -1,5 +1,5 @@
 use anyhow::Result;
-use bitvec::vec::BitVec;
+use apex_hardware::BitVec;
 use embedded_graphics::{
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Point, Size},

@@ -1,15 +1,12 @@
-use crate::render::display::FrameBuffer;
 use anyhow::{anyhow, Result};
-pub const TICK_LENGTH: usize = 50;
-pub const TICKS_PER_SECOND: usize = 1000 / TICK_LENGTH;
-use crate::{
-    hardware::device::Device,
-    render::{
-        display::ContentProvider,
-        notifications::{Notification, NotificationProvider},
-        stream::multiplex,
-    },
+
+use crate::render::{
+    display::ContentProvider,
+    notifications::{Notification, NotificationProvider},
+    stream::multiplex,
 };
+use apex_hardware::{Device, FrameBuffer};
+use apex_input::Command;
 use config::Config;
 use futures::{pin_mut, stream, stream::Stream, StreamExt};
 use itertools::Itertools;
@@ -20,6 +17,9 @@ use std::sync::{
     Arc,
 };
 use tokio::sync::mpsc;
+
+pub const TICK_LENGTH: usize = 50;
+pub const TICKS_PER_SECOND: usize = 1000 / TICK_LENGTH;
 
 #[distributed_slice]
 pub static CONTENT_PROVIDERS: [fn(&Config) -> Result<Box<dyn ContentWrapper>>] = [..];
@@ -60,13 +60,6 @@ impl<T: ContentProvider> ContentWrapper for T {
 
 pub struct Scheduler<T: Device> {
     device: T,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum Command {
-    PreviousSource,
-    NextSource,
-    Shutdown,
 }
 
 impl<T: Device> Scheduler<T> {

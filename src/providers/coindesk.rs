@@ -1,8 +1,9 @@
 use crate::render::{
-    display::{ContentProvider, FrameBuffer},
+    display::ContentProvider,
     scheduler::{ContentWrapper, CONTENT_PROVIDERS},
 };
 use anyhow::{anyhow, Result};
+use apex_hardware::FrameBuffer;
 use async_rwlock::RwLock;
 use async_stream::try_stream;
 use config::Config;

@@ -1,5 +1,5 @@
-use crate::{hardware::device::Device, render::display::FrameBuffer};
 use anyhow::{anyhow, Result};
+use apex_hardware::{Device, FrameBuffer};
 use log::info;
 use reqwest::{header, Client, ClientBuilder};
 use serde::{Deserialize, Serialize};
@@ -78,12 +78,12 @@ impl SteelseriesEngine {
 }
 
 impl Device for SteelseriesEngine {
-    fn draw(&mut self, display: &FrameBuffer) -> Result<()> {
+    fn draw(&mut self, _: &FrameBuffer) -> Result<()> {
         todo!()
     }
 
     fn clear(&mut self) -> Result<()> {
         let clear = FrameBuffer::new();
-        self.draw(&clear)
+        <self as Device>::draw(self, &clear)
     }
 }

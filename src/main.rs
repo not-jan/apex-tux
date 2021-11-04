@@ -49,23 +49,20 @@ compile_error!(
 );
 
 #[cfg(feature = "simulator")]
-use crate::hardware::simulator::Simulator;
-#[cfg(feature = "usb")]
-use crate::hardware::usb::USBDevice;
+use apex_simulator::Simulator;
 
-use crate::{
-    hardware::device::Device,
-    render::{scheduler, scheduler::Scheduler},
-};
+use crate::render::{scheduler, scheduler::Scheduler};
+#[cfg(feature = "usb")]
+use apex_hardware::USBDevice;
 use log::{info, LevelFilter};
 use simplelog::{Config as LoggerConfig, SimpleLogger};
 use tokio::sync::mpsc;
 
-#[cfg(feature = "dbus-support")]
-mod generated;
-
 #[cfg(all(feature = "http", target_family = "windows"))]
 use crate::hardware::http::SteelseriesEngine;
+
+use apex_hardware::Device;
+use apex_input::Command;
 
 #[tokio::main]
 #[allow(clippy::missing_errors_doc)]
@@ -73,10 +70,13 @@ pub async fn main() -> Result<()> {
     SimpleLogger::init(LevelFilter::Info, LoggerConfig::default())?;
 
     // This channel is used to send commands to the scheduler
-    let (tx, rx) = mpsc::channel::<scheduler::Command>(100);
+    let (tx, rx) = mpsc::channel::<Command>(100);
 
     #[cfg(all(feature = "usb", target_family = "unix"))]
-    let mut device = USBDevice::try_connect(tx.clone())?;
+    let mut device = USBDevice::try_connect()?;
+
+    #[cfg(all(feature = "usb", target_family = "unix"))]
+    let hkm = apex_input::InputManager::new(tx.clone());
 
     #[cfg(all(feature = "http", target_family = "windows"))]
     let mut device = SteelseriesEngine::try_connect().await?;
@@ -98,11 +98,12 @@ pub async fn main() -> Result<()> {
 
     ctrlc::set_handler(move || {
         info!("Ctrl + C received, shutting down!");
-        tx.blocking_send(scheduler::Command::Shutdown)
+        tx.blocking_send(Command::Shutdown)
             .expect("Failed to send shutdown signal!");
     })?;
 
     scheduler.start(rx, settings).await?;
-
+    #[cfg(all(feature = "usb", target_family = "unix"))]
+    drop(hkm);
     Ok(())
 }

@@ -1,15 +1,10 @@
-use crate::{
-    hardware::device::Device,
-    render::{display::FrameBuffer, scheduler},
-};
 use anyhow::Result;
-use embedded_graphics::{
-    geometry::Size, iterator::PixelIteratorExt, pixelcolor::BinaryColor, Drawable,
-};
+use apex_hardware::{Device, FrameBuffer};
+use apex_input::Command;
+use embedded_graphics::{geometry::Size, pixelcolor::BinaryColor, Drawable};
 use embedded_graphics_simulator::{
     sdl2::Keycode, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
-use log::info;
 use std::{sync::mpsc, thread, thread::JoinHandle, time::Duration};
 
 static WINDOW_TITLE: &str = concat!(
@@ -25,7 +20,7 @@ pub struct Simulator {
 }
 
 impl Simulator {
-    pub fn connect(sender: tokio::sync::mpsc::Sender<scheduler::Command>) -> Self {
+    pub fn connect(sender: tokio::sync::mpsc::Sender<Command>) -> Self {
         let (tx, rx) = mpsc::channel::<FrameBuffer>();
         let handle = thread::spawn(move || {
             let mut display = SimulatorDisplay::<BinaryColor>::new(Size::new(128, 40));
@@ -44,15 +39,15 @@ impl Simulator {
                     match x {
                         SimulatorEvent::KeyUp { keycode, .. } => {
                             if keycode == Keycode::Left {
-                                sender.blocking_send(scheduler::Command::PreviousSource)
+                                sender.blocking_send(Command::PreviousSource)
                             } else if keycode == Keycode::Right {
-                                sender.blocking_send(scheduler::Command::NextSource)
+                                sender.blocking_send(Command::NextSource)
                             } else {
                                 Ok(())
                             }
                         }
                         SimulatorEvent::Quit => {
-                            sender.blocking_send(scheduler::Command::Shutdown)?;
+                            sender.blocking_send(Command::Shutdown)?;
                             break 'outer;
                         }
                         _ => Ok(()),

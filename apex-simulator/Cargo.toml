@@ -1,0 +1,15 @@
+[package]
+name = "apex-simulator"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.45"
+apex-hardware = { path = "../apex-hardware" }
+embedded-graphics = "0.7.1"
+embedded-graphics-simulator = "0.3.0"
+log = "0.4.14"
+tokio = {version = "1", features=["time", "net", "macros", "rt-multi-thread", "sync"]}
+apex-input = { path = "../apex-input"}

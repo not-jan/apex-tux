@@ -1,4 +1,4 @@
-use crate::render::display::{ContentProvider, FrameBuffer};
+use crate::render::display::ContentProvider;
 use anyhow::{anyhow, Result};
 use async_stream::try_stream;
 use embedded_graphics::{
@@ -20,6 +20,7 @@ use embedded_graphics::{
 };
 use futures_core::stream::Stream;
 
+use apex_hardware::FrameBuffer;
 use tinybmp::Bmp;
 use tokio::{
     time,
