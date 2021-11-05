@@ -17,9 +17,12 @@ pub static STEELSERIES_VENDOR_ID: u16 = 0x1038;
 /// If your device is not in this enum it doesn't mean that it won't work, it
 /// just means that no one has tried it or bothered to add it yet.
 enum SupportedDevice {
-    ApexPro = 0x1614,
+    ApexProTKL = 0x1614,
     // Never tested
     Apex7 = 0x1612,
+    ApexPro = 0x1610,
+    Apex7TKL = 0x1618,
+    Apex5 = 0x161C,
 }
 
 pub struct USBDevice {
