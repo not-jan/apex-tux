@@ -11,14 +11,15 @@ members = [
     "apex-mpris2",
     "apex-music",
     "apex-simulator",
-    "apex-input"
+    "apex-input",
+    "apex-engine"
 ]
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-apex-hardware = {path = "./apex-hardware"}
+apex-hardware = {path = "./apex-hardware", features = ["async"]}
 
 
 anyhow = "1.0.45"
@@ -51,6 +52,8 @@ apex-input = {path = "./apex-input" }
 apex-music = { path = "./apex-music" }
 apex-mpris2 = { path = "./apex-mpris2", optional = true}
 apex-simulator = { path = "./apex-simulator", optional = true }
+apex-engine = { path = "./apex-engine", optional = true }
+
 
 [features]
 default = ["dbus-support", "crypto", "usb"]
@@ -59,6 +62,7 @@ http = ["serde", "serde_json", "reqwest"]
 crypto = ["http"]
 simulator = ["apex-simulator"]
 usb = ["apex-hardware/usb", "apex-input/hotkeys"]
+engine = ["apex-engine"]
 debug = []
 
 
