@@ -31,7 +31,7 @@ static BTC_BMP: SyncLazy<Bmp<BinaryColor>> = SyncLazy::new(|| {
 });
 
 #[distributed_slice(CONTENT_PROVIDERS)]
-static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = register_callback;
+pub static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = register_callback;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Target {

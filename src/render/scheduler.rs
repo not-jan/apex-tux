@@ -77,10 +77,17 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
         rx: broadcast::Receiver<Command>,
         mut config: Config,
     ) -> Result<()> {
+        #[cfg(not(target_family = "macos"))]
         let mut providers = CONTENT_PROVIDERS
             .iter()
             .map(|f| (f)(&mut config))
             .collect::<Result<Vec<_>>>()?;
+
+        #[cfg(target_family = "macos")]
+        let mut providers = [
+            crate::providers::clock::PROVIDER_INIT(&mut config)?,
+            crate::providers::coindesk::PROVIDER_INIT(&mut config)?,
+        ];
 
         let mut notifications = NOTIFICATION_PROVIDERS
             .iter()
