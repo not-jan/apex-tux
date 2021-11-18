@@ -1,14 +1,14 @@
 use crate::Command;
 use anyhow::Result;
 use tauri_hotkey::{Hotkey, HotkeyManager, Key, Modifier};
-use tokio::sync::mpsc;
+use tokio::sync::broadcast;
 
 pub struct InputManager {
     _hkm: HotkeyManager,
 }
 
 impl InputManager {
-    pub fn new(sender: mpsc::Sender<Command>) -> Result<Self> {
+    pub fn new(sender: broadcast::Sender<Command>) -> Result<Self> {
         let mut hkm = HotkeyManager::new();
 
         let modifiers = vec![Modifier::ALT, Modifier::SHIFT];
@@ -22,7 +22,7 @@ impl InputManager {
             },
             move || {
                 sender
-                    .blocking_send(Command::PreviousSource)
+                    .send(Command::PreviousSource)
                     .expect("Failed to send command!");
             },
         )?;
@@ -33,7 +33,7 @@ impl InputManager {
             },
             move || {
                 sender2
-                    .blocking_send(Command::NextSource)
+                    .send(Command::NextSource)
                     .expect("Failed to send command!");
             },
         )?;
