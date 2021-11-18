@@ -6,6 +6,7 @@ use gamesense::raw_client::{
 };
 use std::future::Future;
 
+use log::info;
 const GAME: &str = "APEXTUX";
 const EVENT: &str = "SCREEN";
 
@@ -43,8 +44,8 @@ impl Engine {
     pub async fn new() -> Result<Self> {
         let client = RawGameSenseClient::new()?;
 
-        REGISTER_GAME.send(&client).await?;
-        REGISTER_EVENT.send(&client).await?;
+        info!("{}", REGISTER_GAME.send(&client).await?);
+        info!("{}", REGISTER_EVENT.send(&client).await?);
 
         Ok(Self {
             client: RawGameSenseClient::new()?,
@@ -52,13 +53,13 @@ impl Engine {
     }
 
     pub async fn heartbeat(&self) -> Result<()> {
-        HEARTBEAT.send(&self.client).await?;
+        info!("{}", HEARTBEAT.send(&self.client).await?);
         Ok(())
     }
 
     pub async fn stop(&self) -> Result<()> {
-        REMOVE_EVENT.send(&self.client).await?;
-        REMOVE_GAME.send(&self.client).await?;
+        info!("{}", REMOVE_EVENT.send(&self.client).await?);
+        info!("{}", REMOVE_GAME.send(&self.client).await?);
         Ok(())
     }
 }
@@ -83,7 +84,7 @@ impl AsyncDevice for Engine {
                 },
             };
 
-            event.send(&self.client).await?;
+            info!("{}", event.send(&self.client).await?);
 
             Ok(())
         }

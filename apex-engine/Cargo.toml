@@ -10,3 +10,4 @@ gamesense = { git = "https://github.com/not-jan/gamesense" }
 anyhow = "1"
 apex-hardware = { path = "../apex-hardware", features = ["async"] }
 tokio = {version = "1", features=["time", "net", "macros", "rt-multi-thread", "sync"]}
+log = "0.4.14"
