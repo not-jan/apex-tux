@@ -1,11 +1,12 @@
 use anyhow::{anyhow, Result};
+use std::{future::Future, marker::PhantomData};
 
 use crate::render::{
     display::ContentProvider,
     notifications::{Notification, NotificationProvider},
     stream::multiplex,
 };
-use apex_hardware::{Device, FrameBuffer};
+use apex_hardware::{AsyncDevice, Device, FrameBuffer};
 use apex_input::Command;
 use config::Config;
 use futures::{pin_mut, stream, stream::Stream, StreamExt};
@@ -16,7 +17,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
-use tokio::sync::mpsc;
+use tokio::sync::broadcast;
 
 pub const TICK_LENGTH: usize = 50;
 pub const TICKS_PER_SECOND: usize = 1000 / TICK_LENGTH;
@@ -58,16 +59,24 @@ impl<T: ContentProvider> ContentWrapper for T {
     }
 }
 
-pub struct Scheduler<T: Device> {
+pub struct Scheduler<'a, T: AsyncDevice + 'a> {
     device: T,
+    _a: PhantomData<&'a T>,
 }
 
-impl<T: Device> Scheduler<T> {
+impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
     pub fn new(device: T) -> Self {
-        Self { device }
+        Self {
+            device,
+            _a: Default::default(),
+        }
     }
 
-    pub async fn start(&mut self, rx: mpsc::Receiver<Command>, mut config: Config) -> Result<()> {
+    pub async fn start(
+        &mut self,
+        rx: broadcast::Receiver<Command>,
+        mut config: Config,
+    ) -> Result<()> {
         let mut providers = CONTENT_PROVIDERS
             .iter()
             .map(|f| (f)(&mut config))
@@ -124,19 +133,19 @@ impl<T: Device> Scheduler<T> {
             tokio::select! {
                 cmd = rx.recv() => {
                     match cmd {
-                        Some(Command::Shutdown) => break,
-                        Some(Command::NextSource) => {
+                        Ok(Command::Shutdown) => break,
+                        Ok(Command::NextSource) => {
                             let new = current.load(Ordering::SeqCst).wrapping_add(1) % size;
                             current.store(new, Ordering::SeqCst);
-                            self.device.clear()?;
+                            self.device.clear().await?;
                         },
-                        Some(Command::PreviousSource) => {
+                        Ok(Command::PreviousSource) => {
                             let new = match current.load(Ordering::SeqCst) {
                                 0 => size - 1,
                                 n => (n - 1) % size
                             };
                             current.store(new, Ordering::SeqCst);
-                            self.device.clear()?;
+                            self.device.clear().await?;
                         },
                         _ => {}
                     }
@@ -145,19 +154,19 @@ impl<T: Device> Scheduler<T> {
                     if let Some(Ok(mut notification)) = notification {
                         let mut stream = Box::pin(notification.stream()?);
                         while let Some(display) = stream.next().await {
-                            self.device.draw(&display?)?;
+                            self.device.draw(&display?).await?;
                         }
                     }
                 }
                 content = y.next() => {
                     if let Some(Ok(content)) = &content {
-                        self.device.draw(content)?;
+                        self.device.draw(content).await?;
                     }
                 }
             };
         }
 
-        self.device.clear()?;
+        self.device.clear().await?;
         Ok(())
     }
 }

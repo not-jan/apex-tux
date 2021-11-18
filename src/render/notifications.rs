@@ -53,7 +53,9 @@ pub struct NotificationBuilder<'a> {
 }
 
 pub trait NotificationProvider {
-    type NotificationStream<'a>: Stream<Item = Result<Notification>> + 'a;
+    type NotificationStream<'a>: Stream<Item = Result<Notification>> + 'a
+    where
+        Self: 'a;
 
     #[allow(clippy::needless_lifetimes)]
     fn stream<'this>(&'this mut self) -> Result<Self::NotificationStream<'this>>;

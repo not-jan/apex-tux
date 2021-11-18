@@ -34,12 +34,13 @@
 extern crate embedded_graphics;
 
 use anyhow::Result;
+use futures::pin_mut;
 use log::warn;
+use std::{sync::Arc, time::Duration};
 
 #[cfg(feature = "dbus-support")]
 mod dbus;
 
-mod hardware;
 mod providers;
 mod render;
 
@@ -52,16 +53,19 @@ compile_error!(
 use apex_simulator::Simulator;
 
 use crate::render::{scheduler, scheduler::Scheduler};
+#[cfg(all(feature = "engine"))]
+use apex_engine::Engine;
+use apex_hardware::AsyncDevice;
 #[cfg(feature = "usb")]
 use apex_hardware::USBDevice;
 use log::{info, LevelFilter};
 use simplelog::{Config as LoggerConfig, SimpleLogger};
-use tokio::sync::mpsc;
+use tokio::{
+    sync::{broadcast, mpsc},
+    task::JoinHandle,
+    time::MissedTickBehavior,
+};
 
-#[cfg(all(feature = "http", target_family = "windows"))]
-use crate::hardware::http::SteelseriesEngine;
-
-use apex_hardware::Device;
 use apex_input::Command;
 
 #[tokio::main]
@@ -70,16 +74,37 @@ pub async fn main() -> Result<()> {
     SimpleLogger::init(LevelFilter::Info, LoggerConfig::default())?;
 
     // This channel is used to send commands to the scheduler
-    let (tx, rx) = mpsc::channel::<Command>(100);
-
-    #[cfg(all(feature = "usb", target_family = "unix"))]
+    let (tx, mut rx) = broadcast::channel::<Command>(100);
+    let mut rx2 = tx.subscribe();
+    #[cfg(all(feature = "usb", target_family = "unix", not(feature = "engine")))]
     let mut device = USBDevice::try_connect()?;
 
-    #[cfg(all(feature = "usb", target_family = "unix"))]
+    #[cfg(all(feature = "usb"))]
     let hkm = apex_input::InputManager::new(tx.clone());
 
-    #[cfg(all(feature = "http", target_family = "windows"))]
-    let mut device = SteelseriesEngine::try_connect().await?;
+    #[cfg(all(feature = "engine"))]
+    let mut device = Engine::new().await?;
+    let ctl = device.clone();
+
+    let handle: JoinHandle<Result<()>> = tokio::spawn(async move {
+        let mut ticker = tokio::time::interval(Duration::from_secs(10));
+        ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
+        loop {
+            tokio::select! {
+                _ = ticker.tick() => {
+
+                    ctl.heartbeat().await?;
+                },
+                v = rx2.recv() => {
+                    if let Ok(Command::Shutdown) = v {
+                        break;
+                    }
+                }
+            }
+        }
+        ctl.stop().await?;
+        Ok(())
+    });
 
     let mut settings = config::Config::default();
     settings
@@ -92,18 +117,21 @@ pub async fn main() -> Result<()> {
     #[cfg(feature = "simulator")]
     let mut device = Simulator::connect(tx.clone());
 
-    device.clear()?;
+    device.clear().await?;
 
     let mut scheduler = Scheduler::new(device);
 
     ctrlc::set_handler(move || {
         info!("Ctrl + C received, shutting down!");
-        tx.blocking_send(Command::Shutdown)
+        tx.send(Command::Shutdown)
             .expect("Failed to send shutdown signal!");
     })?;
 
     scheduler.start(rx, settings).await?;
     #[cfg(all(feature = "usb", target_family = "unix"))]
     drop(hkm);
+
+    handle.abort();
+
     Ok(())
 }
