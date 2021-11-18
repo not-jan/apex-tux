@@ -41,7 +41,6 @@ use std::{sync::Arc, time::Duration};
 #[cfg(feature = "dbus-support")]
 mod dbus;
 
-mod hardware;
 mod providers;
 mod render;
 
