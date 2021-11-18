@@ -11,7 +11,7 @@ pub struct FrameBuffer {
     /// trailing null byte. This is done to prevent superfluous copies when
     /// sending the image to a display device. The implementations of
     /// `Drawable` and `DrawTarget` take this quirk into account.
-    pub(crate) framebuffer: BitArray<Msb0, [u8; 40 * 128 / 8 + 2]>,
+    pub framebuffer: BitArray<Msb0, [u8; 40 * 128 / 8 + 2]>,
 }
 
 impl Default for FrameBuffer {
@@ -24,7 +24,7 @@ impl Default for FrameBuffer {
 
 impl FrameBuffer {
     /// Initializes a new `FrameBuffer` with all pixels set to
-    /// `BinaryColor::Off`
+    /// `BinaryColor::Off `
     pub fn new() -> Self {
         Self::default()
     }
@@ -99,7 +99,7 @@ pub trait AsyncDevice {
     type ClearResult<'a>: Future<Output = Result<()>> + 'a;
 
     #[allow(clippy::needless_lifetimes)]
-    fn draw<'this>(&'this mut self, display: &FrameBuffer) -> Self::DrawResult<'this>;
+    fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this>;
     #[allow(clippy::needless_lifetimes)]
     fn clear<'this>(&'this mut self) -> Self::ClearResult<'this>;
 }
@@ -113,7 +113,7 @@ where
     type DrawResult<'a> = impl Future<Output = Result<()>> + 'a;
 
     #[allow(clippy::needless_lifetimes)]
-    fn draw<'this>(&'this mut self, display: &FrameBuffer) -> Self::DrawResult<'this> {
+    fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this> {
         let x = <Self as Device>::draw(self, display);
         async { x }
     }
