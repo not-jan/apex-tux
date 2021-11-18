@@ -95,8 +95,12 @@ impl DrawTarget for FrameBuffer {
 
 #[cfg(feature = "async")]
 pub trait AsyncDevice {
-    type DrawResult<'a>: Future<Output = Result<()>> + 'a;
-    type ClearResult<'a>: Future<Output = Result<()>> + 'a;
+    type DrawResult<'a>: Future<Output = Result<()>> + 'a
+    where
+        Self: 'a;
+    type ClearResult<'a>: Future<Output = Result<()>> + 'a
+    where
+        Self: 'a;
 
     #[allow(clippy::needless_lifetimes)]
     fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this>;
