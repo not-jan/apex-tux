@@ -1,6 +1,6 @@
 use crate::generated::MediaPlayer2Player;
 use anyhow::{anyhow, Result};
-use apex_music::{AsyncPlayer, Metadata as MetadataTrait, PlaybackStatus};
+use apex_music::{AsyncPlayer, Metadata as MetadataTrait, PlaybackStatus, PlayerEvent, Progress};
 use async_stream::stream;
 use dbus::{
     arg::PropMap,
@@ -19,13 +19,6 @@ pub struct Player<'a>(Proxy<'a, Arc<SyncConnection>>);
 
 #[derive(Debug)]
 pub struct Metadata(PropMap);
-
-
-pub struct Progress {
-    pub metadata: Metadata,
-    pub position: i64,
-    pub status: PlaybackStatus,
-}
 
 impl MetadataTrait for Metadata {
     fn title(&self) -> Result<String> {
@@ -190,7 +183,7 @@ impl<'a> Player<'a> {
         ))
     }
 
-    pub async fn progress(&self) -> Result<Progress> {
+    pub async fn progress(&self) -> Result<Progress<Metadata>> {
         Ok(Progress {
             metadata: self.metadata().await?,
             position: self.position().await?,
