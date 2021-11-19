@@ -20,7 +20,7 @@ pub struct Simulator {
 }
 
 impl Simulator {
-    pub fn connect(sender: tokio::sync::mpsc::Sender<Command>) -> Self {
+    pub fn connect(sender: tokio::sync::broadcast::Sender<Command>) -> Self {
         let (tx, rx) = mpsc::channel::<FrameBuffer>();
         let handle = thread::spawn(move || {
             let mut display = SimulatorDisplay::<BinaryColor>::new(Size::new(128, 40));
@@ -39,15 +39,14 @@ impl Simulator {
                     match x {
                         SimulatorEvent::KeyUp { keycode, .. } => {
                             if keycode == Keycode::Left {
-                                sender.blocking_send(Command::PreviousSource)
+                                sender.send(Command::PreviousSource)?;
                             } else if keycode == Keycode::Right {
-                                sender.blocking_send(Command::NextSource)
-                            } else {
-                                Ok(())
+                                sender.send(Command::NextSource)?;
                             }
+                            Ok::<(), anyhow::Error>(())
                         }
                         SimulatorEvent::Quit => {
-                            sender.blocking_send(Command::Shutdown)?;
+                            sender.send(Command::Shutdown)?;
                             break 'outer;
                         }
                         _ => Ok(()),
@@ -74,6 +73,10 @@ impl Device for Simulator {
     fn clear(&mut self) -> Result<()> {
         let new = FrameBuffer::new();
         self.draw(&new)?;
+        Ok(())
+    }
+
+    fn shutdown(&mut self) -> Result<()> {
         Ok(())
     }
 }

@@ -9,6 +9,14 @@ pub enum PlaybackStatus {
     Playing,
 }
 
+
+#[derive(Clone, Debug)]
+pub enum PlayerEvent {
+    Seeked,
+    Properties,
+    Timer,
+}
+
 pub trait Metadata {
     fn title(&self) -> Result<String>;
     fn artists(&self) -> Result<String>;
@@ -21,6 +29,12 @@ pub trait Player {
     fn position(&self) -> Result<i64>;
     fn name(&self) -> String;
     fn playback_status(&self) -> Result<PlaybackStatus>;
+}
+
+pub struct Progress<T: Metadata + Sized> {
+    pub metadata: T,
+    pub position: i64,
+    pub status: PlaybackStatus,
 }
 
 pub trait AsyncPlayer {

@@ -3,7 +3,6 @@
     generic_associated_types,
     type_alias_impl_trait,
     const_fn_trait_bound,
-    format_args_capture,
     once_cell,
     try_blocks,
     const_fn_floating_point_arithmetic,
@@ -36,10 +35,10 @@ extern crate embedded_graphics;
 use anyhow::Result;
 use log::warn;
 
-#[cfg(feature = "dbus-support")]
+// This is kind of pointless on non-Linux platforms
+#[cfg(all(feature = "dbus-support", target_os = "linux"))]
 mod dbus;
 
-mod hardware;
 mod providers;
 mod render;
 
@@ -52,16 +51,15 @@ compile_error!(
 use apex_simulator::Simulator;
 
 use crate::render::{scheduler, scheduler::Scheduler};
-#[cfg(feature = "usb")]
+#[cfg(all(feature = "engine"))]
+use apex_engine::Engine;
+use apex_hardware::AsyncDevice;
+#[cfg(all(feature = "usb", target_os = "linux", not(feature = "engine")))]
 use apex_hardware::USBDevice;
 use log::{info, LevelFilter};
 use simplelog::{Config as LoggerConfig, SimpleLogger};
-use tokio::sync::mpsc;
+use tokio::sync::broadcast;
 
-#[cfg(all(feature = "http", target_family = "windows"))]
-use crate::hardware::http::SteelseriesEngine;
-
-use apex_hardware::Device;
 use apex_input::Command;
 
 #[tokio::main]
@@ -70,16 +68,15 @@ pub async fn main() -> Result<()> {
     SimpleLogger::init(LevelFilter::Info, LoggerConfig::default())?;
 
     // This channel is used to send commands to the scheduler
-    let (tx, rx) = mpsc::channel::<Command>(100);
-
-    #[cfg(all(feature = "usb", target_family = "unix"))]
+    let (tx, rx) = broadcast::channel::<Command>(100);
+    #[cfg(all(feature = "usb", target_family = "unix", not(feature = "engine")))]
     let mut device = USBDevice::try_connect()?;
 
-    #[cfg(all(feature = "usb", target_family = "unix"))]
+    #[cfg(any(feature = "usb", feature = "engine"))]
     let hkm = apex_input::InputManager::new(tx.clone());
 
-    #[cfg(all(feature = "http", target_family = "windows"))]
-    let mut device = SteelseriesEngine::try_connect().await?;
+    #[cfg(all(feature = "engine"))]
+    let mut device = Engine::new().await?;
 
     let mut settings = config::Config::default();
     settings
@@ -92,18 +89,18 @@ pub async fn main() -> Result<()> {
     #[cfg(feature = "simulator")]
     let mut device = Simulator::connect(tx.clone());
 
-    device.clear()?;
+    device.clear().await?;
 
     let mut scheduler = Scheduler::new(device);
 
     ctrlc::set_handler(move || {
         info!("Ctrl + C received, shutting down!");
-        tx.blocking_send(Command::Shutdown)
+        tx.send(Command::Shutdown)
             .expect("Failed to send shutdown signal!");
     })?;
 
     scheduler.start(rx, settings).await?;
-    #[cfg(all(feature = "usb", target_family = "unix"))]
+    #[cfg(any(feature = "usb", feature = "engine"))]
     drop(hkm);
     Ok(())
 }

@@ -24,7 +24,7 @@ use tokio::{
 
 #[doc(hidden)]
 #[distributed_slice(CONTENT_PROVIDERS)]
-static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = register_callback;
+pub static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = register_callback;
 
 #[derive(Debug, Copy, Clone)]
 /// Represents the options a user can choose for the clock format
@@ -51,7 +51,7 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     Ok(Box::new(Clock { clock_format }))
 }
 
-struct Clock {
+pub struct Clock {
     clock_format: ClockFormat,
 }
 

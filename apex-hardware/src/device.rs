@@ -11,7 +11,7 @@ pub struct FrameBuffer {
     /// trailing null byte. This is done to prevent superfluous copies when
     /// sending the image to a display device. The implementations of
     /// `Drawable` and `DrawTarget` take this quirk into account.
-    pub(crate) framebuffer: BitArray<Msb0, [u8; 40 * 128 / 8 + 2]>,
+    pub framebuffer: BitArray<Msb0, [u8; 40 * 128 / 8 + 2]>,
 }
 
 impl Default for FrameBuffer {
@@ -24,7 +24,7 @@ impl Default for FrameBuffer {
 
 impl FrameBuffer {
     /// Initializes a new `FrameBuffer` with all pixels set to
-    /// `BinaryColor::Off`
+    /// `BinaryColor::Off `
     pub fn new() -> Self {
         Self::default()
     }
@@ -38,6 +38,8 @@ pub trait Device {
     /// Most implementations will send an empty `FrameBuffer` to `Device::draw`
     /// but there may be more efficient ways for some devices to implement here.
     fn clear(&mut self) -> Result<()>;
+
+    fn shutdown(&mut self) -> Result<()>;
 }
 
 impl Drawable for FrameBuffer {
@@ -95,13 +97,23 @@ impl DrawTarget for FrameBuffer {
 
 #[cfg(feature = "async")]
 pub trait AsyncDevice {
-    type DrawResult<'a>: Future<Output = Result<()>> + 'a;
-    type ClearResult<'a>: Future<Output = Result<()>> + 'a;
+    type DrawResult<'a>: Future<Output = Result<()>> + 'a
+    where
+        Self: 'a;
+    type ClearResult<'a>: Future<Output = Result<()>> + 'a
+    where
+        Self: 'a;
+
+    type ShutdownResult<'a>: Future<Output = Result<()>> + 'a
+    where
+        Self: 'a;
 
     #[allow(clippy::needless_lifetimes)]
-    fn draw<'this>(&'this mut self, display: &FrameBuffer) -> Self::DrawResult<'this>;
+    fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this>;
     #[allow(clippy::needless_lifetimes)]
     fn clear<'this>(&'this mut self) -> Self::ClearResult<'this>;
+    #[allow(clippy::needless_lifetimes)]
+    fn shutdown<'this>(&'this mut self) -> Self::ShutdownResult<'this>;
 }
 
 #[cfg(feature = "async")]
@@ -109,11 +121,21 @@ impl<T: Device> AsyncDevice for T
 where
     T: 'static,
 {
-    type ClearResult<'a> = impl Future<Output = Result<()>> + 'a;
-    type DrawResult<'a> = impl Future<Output = Result<()>> + 'a;
+    type ClearResult<'a>
+    where
+        Self: 'a,
+    = impl Future<Output = Result<()>> + 'a;
+    type DrawResult<'a>
+    where
+        Self: 'a,
+    = impl Future<Output = Result<()>> + 'a;
+    type ShutdownResult<'a>
+    where
+        Self: 'a,
+    = impl Future<Output = Result<()>> + 'a;
 
     #[allow(clippy::needless_lifetimes)]
-    fn draw<'this>(&'this mut self, display: &FrameBuffer) -> Self::DrawResult<'this> {
+    fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this> {
         let x = <Self as Device>::draw(self, display);
         async { x }
     }
@@ -121,6 +143,12 @@ where
     #[allow(clippy::needless_lifetimes)]
     fn clear<'this>(&'this mut self) -> Self::ClearResult<'this> {
         let x = <Self as Device>::clear(self);
+        async { x }
+    }
+
+    #[allow(clippy::needless_lifetimes)]
+    fn shutdown<'this>(&'this mut self) -> Self::ShutdownResult<'this> {
+        let x = <Self as Device>::shutdown(self);
         async { x }
     }
 }
