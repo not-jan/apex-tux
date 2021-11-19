@@ -1,8 +1,8 @@
 use anyhow::Result;
 use apex_hardware::{AsyncDevice, FrameBuffer};
 use gamesense::raw_client::{
-    FrameContainer, GameEvent, Heartbeat, RawGameSenseClient, RegisterEvent, RegisterGame,
-    RemoveEvent, RemoveGame, ScreenFrameData, Sendable,
+    BindGameEvent, FrameContainer, GameEvent, Heartbeat, RawGameSenseClient, RegisterEvent,
+    RegisterGame, RemoveEvent, RemoveGame, Screen, ScreenFrameData, ScreenHandler, Sendable,
 };
 use std::future::Future;
 
@@ -23,7 +23,7 @@ const REGISTER_EVENT: RegisterEvent = RegisterEvent {
     min_value: None,
     max_value: None,
     icon_id: None,
-    value_optional: None,
+    value_optional: Some(true),
 };
 
 pub const REMOVE_EVENT: RemoveEvent = RemoveEvent {
@@ -45,11 +45,30 @@ impl Engine {
         let client = RawGameSenseClient::new()?;
 
         info!("{}", REGISTER_GAME.send(&client).await?);
-        info!("{}", REGISTER_EVENT.send(&client).await?);
+        //info!("{}", REGISTER_EVENT.send(&client).await?);
 
-        Ok(Self {
-            client: RawGameSenseClient::new()?,
-        })
+        let x = BindGameEvent {
+            game: GAME,
+            event: EVENT,
+            min_value: None,
+            max_value: None,
+            icon_id: None,
+            value_optional: Some(true),
+            handlers: vec![ScreenHandler {
+                device: "screened-128x40",
+                mode: "screen",
+                zone: "one",
+                datas: vec![Screen {
+                    has_text: false,
+                    image_data: vec![0u8; 640],
+                }],
+            }],
+        }
+        .send(&client)
+        .await?;
+        info!("{}", x);
+
+        Ok(Self { client })
     }
 
     pub async fn heartbeat(&self) -> Result<()> {
