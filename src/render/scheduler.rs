@@ -1,12 +1,12 @@
 use anyhow::{anyhow, Result};
-use std::{future::Future, marker::PhantomData};
+use std::marker::PhantomData;
 
 use crate::render::{
     display::ContentProvider,
     notifications::{Notification, NotificationProvider},
     stream::multiplex,
 };
-use apex_hardware::{AsyncDevice, Device, FrameBuffer};
+use apex_hardware::{AsyncDevice, FrameBuffer};
 use apex_input::Command;
 use config::Config;
 use futures::{pin_mut, stream, stream::Stream, StreamExt};
@@ -61,14 +61,14 @@ impl<T: ContentProvider> ContentWrapper for T {
 
 pub struct Scheduler<'a, T: AsyncDevice + 'a> {
     device: T,
-    _a: PhantomData<&'a T>,
+    _marker: PhantomData<&'a T>,
 }
 
 impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
     pub fn new(device: T) -> Self {
         Self {
             device,
-            _a: Default::default(),
+            _marker: std::marker::PhantomData::default(),
         }
     }
 
@@ -174,6 +174,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
         }
 
         self.device.clear().await?;
+        self.device.shutdown().await?;
         Ok(())
     }
 }

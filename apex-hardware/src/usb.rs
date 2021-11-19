@@ -73,4 +73,8 @@ impl Device for USBDevice {
         let display = FrameBuffer::new();
         <Self as Device>::draw(self, &display)
     }
+
+    fn shutdown(&mut self) -> Result<()> {
+        Ok(())
+    }
 }

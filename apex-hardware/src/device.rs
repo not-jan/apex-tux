@@ -38,6 +38,8 @@ pub trait Device {
     /// Most implementations will send an empty `FrameBuffer` to `Device::draw`
     /// but there may be more efficient ways for some devices to implement here.
     fn clear(&mut self) -> Result<()>;
+
+    fn shutdown(&mut self) -> Result<()>;
 }
 
 impl Drawable for FrameBuffer {
@@ -102,10 +104,16 @@ pub trait AsyncDevice {
     where
         Self: 'a;
 
+    type ShutdownResult<'a>: Future<Output = Result<()>> + 'a
+    where
+        Self: 'a;
+
     #[allow(clippy::needless_lifetimes)]
     fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this>;
     #[allow(clippy::needless_lifetimes)]
     fn clear<'this>(&'this mut self) -> Self::ClearResult<'this>;
+    #[allow(clippy::needless_lifetimes)]
+    fn shutdown<'this>(&'this mut self) -> Self::ShutdownResult<'this>;
 }
 
 #[cfg(feature = "async")]
@@ -121,6 +129,10 @@ where
     where
         Self: 'a,
     = impl Future<Output = Result<()>> + 'a;
+    type ShutdownResult<'a>
+    where
+        Self: 'a,
+    = impl Future<Output = Result<()>> + 'a;
 
     #[allow(clippy::needless_lifetimes)]
     fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this> {
@@ -131,6 +143,12 @@ where
     #[allow(clippy::needless_lifetimes)]
     fn clear<'this>(&'this mut self) -> Self::ClearResult<'this> {
         let x = <Self as Device>::clear(self);
+        async { x }
+    }
+
+    #[allow(clippy::needless_lifetimes)]
+    fn shutdown<'this>(&'this mut self) -> Self::ShutdownResult<'this> {
+        let x = <Self as Device>::shutdown(self);
         async { x }
     }
 }
