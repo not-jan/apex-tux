@@ -12,7 +12,8 @@ members = [
     "apex-music",
     "apex-simulator",
     "apex-input",
-    "apex-engine"
+    "apex-engine",
+    "apex-windows"
 ]
 
 
@@ -34,8 +35,6 @@ futures = "0.3"
 linkme = "0.2"
 log = "0.4.14"
 
-dbus = {version = "0.9", optional = true}
-dbus-tokio = { version = "0.7.4", optional = true }
 ctrlc = "3.2.0"
 simplelog = "0.10.0"
 pin-project-lite = "0.2.7"
@@ -50,10 +49,14 @@ toml = "0.5.8"
 num-traits = "0.2.14"
 apex-input = {path = "./apex-input" }
 apex-music = { path = "./apex-music" }
-apex-mpris2 = { path = "./apex-mpris2", optional = true}
 apex-simulator = { path = "./apex-simulator", optional = true }
 apex-engine = { path = "./apex-engine", optional = true }
 
+
+[target.'cfg(target_os = "linux")'.dependencies]
+apex-mpris2 = { path = "./apex-mpris2", optional = true}
+dbus = {version = "0.9", optional = true}
+dbus-tokio = { version = "0.7.4", optional = true }
 
 [features]
 default = ["dbus-support", "crypto", "usb"]
