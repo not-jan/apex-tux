@@ -1,0 +1,14 @@
+[package]
+name = "apex-windows"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+
+[dependencies]
+anyhow = "1.0.47"
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.28", features = ["Media_Control", "Foundation", "std"] }
+apex-music = { path = "../apex-music" }
