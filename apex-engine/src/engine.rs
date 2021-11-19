@@ -88,7 +88,7 @@ impl AsyncDevice for Engine {
                 },
             };
 
-            info!("{}", event.send(&self.client).await?);
+            event.send(&self.client).await?;
 
             Ok(())
         }

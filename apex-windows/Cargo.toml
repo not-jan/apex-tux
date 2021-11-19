@@ -9,6 +9,10 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.47"
+async-stream = "0.3.2"
+futures-core = "0.3.17"
+futures-util = "0.3.17"
+tokio = { version = "1.14.0", features = ["time"] }
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.28", features = ["Media_Control", "Foundation", "std"] }
 apex-music = { path = "../apex-music" }

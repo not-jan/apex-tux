@@ -20,12 +20,6 @@ pub struct Player<'a>(Proxy<'a, Arc<SyncConnection>>);
 #[derive(Debug)]
 pub struct Metadata(PropMap);
 
-#[derive(Clone, Debug)]
-pub enum PlayerEvent {
-    Seeked,
-    Properties,
-    Timer,
-}
 
 pub struct Progress {
     pub metadata: Metadata,

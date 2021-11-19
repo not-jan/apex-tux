@@ -1,14 +1,20 @@
 use crate::render::display::ContentProvider;
-use anyhow::{anyhow, Result};
+#[cfg(not(target_os = "windows"))]
+use anyhow::anyhow;
+use anyhow::Result;
 use async_stream::try_stream;
 use embedded_graphics::{
     geometry::Size,
     image::Image,
     pixelcolor::BinaryColor,
-    prelude::{Point, Primitive},
-    primitives::{Line, PrimitiveStyle},
+    prelude::{Point, },
+
     Drawable,
 };
+#[cfg(not(target_os = "windows"))]
+use embedded_graphics::prelude::Primitive;
+#[cfg(not(target_os = "windows"))]
+use embedded_graphics::primitives::{Line, PrimitiveStyle};
 use futures_core::stream::Stream;
 use linkme::distributed_slice;
 
@@ -27,6 +33,7 @@ use embedded_graphics::{
     text::{Baseline, Text},
 };
 use futures::StreamExt;
+use apex_music::Progress;
 use std::{convert::TryInto, lazy::SyncLazy, sync::Arc};
 use tokio::time::{Duration, MissedTickBehavior};
 
@@ -45,9 +52,16 @@ static NOTE_BMP: SyncLazy<Bmp<BinaryColor>> = SyncLazy::new(|| {
     Bmp::<BinaryColor>::from_slice(NOTE_ICON).expect("Failed to parse BMP for note icon!")
 });
 
+// Windows doesn't expose the current progress within the song so we don't draw it here
+// TODO: Spice this up?
+#[cfg(target_os = "windows")]
+static PLAYER_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
+    FrameBuffer::new()
+});
+
+#[cfg(not(target_os = "windows"))]
 static PLAYER_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
     let mut base = FrameBuffer::new();
-
     let style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
 
     let points = vec![
@@ -57,7 +71,7 @@ static PLAYER_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
     ];
 
     // Draw a border for the progress bar
-    points
+        points
         .iter()
         .try_for_each(|(first, second)| {
             Line::new(*first, *second)
@@ -65,6 +79,7 @@ static PLAYER_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
                 .draw(&mut base)
         })
         .expect("Failed to prepare template image for music player!");
+
     base
 });
 
@@ -158,26 +173,29 @@ impl MediaPlayerRenderer {
         })
     }
 
-    pub fn update(&mut self, progress: &apex_mpris2::Progress) -> Result<FrameBuffer> {
+    pub fn update<T: Metadata>(&mut self, progress: &Progress<T>) -> Result<FrameBuffer> {
         let mut display = match progress.status {
             PlaybackStatus::Playing => *PLAY_TEMPLATE,
             PlaybackStatus::Paused | PlaybackStatus::Stopped => *PAUSE_TEMPLATE,
         };
 
         let metadata = &progress.metadata;
-        let length = metadata
-            .length()
-            .map_err(|_| anyhow!("Couldn't get length!"))? as f64;
 
-        let current = progress.position as f64;
+        #[cfg(not(target_os = "windows"))]
+        {
+            let length = metadata
+                .length()
+                .map_err(|_| anyhow!("Couldn't get length!"))? as f64;
+            let current = progress.position as f64;
 
-        let completion = (current / length).clamp(0_f64, 1_f64);
+            let completion = (current / length).clamp(0_f64, 1_f64);
 
-        let pixels = (128_f64 - 2_f64 * 3_f64) * completion;
-        let style = PrimitiveStyle::with_stroke(BinaryColor::On, 3);
-        Line::new(Point::new(3, 35), Point::new(pixels as i32 + 3, 35))
-            .into_styled(style)
-            .draw(&mut display)?;
+            let pixels = (128_f64 - 2_f64 * 3_f64) * completion;
+            let style = PrimitiveStyle::with_stroke(BinaryColor::On, 3);
+            Line::new(Point::new(3, 35), Point::new(pixels as i32 + 3, 35))
+                .into_styled(style)
+                .draw(&mut display)?;
+        }
 
         let artists = metadata.artists()?;
         let title = metadata.title()?;
@@ -223,9 +241,15 @@ impl ContentProvider for MediaPlayerBuilder {
             self.name
         );
 
+
+
+
         let mut renderer = MediaPlayerRenderer::new()?;
 
         Ok(try_stream! {
+            #[cfg(target_os = "windows")]
+            let mpris = apex_windows::Player::new()?;
+            #[cfg(target_os = "linux")]
             let mpris = apex_mpris2::MPRIS2::new().await?;
             pin_mut!(mpris);
 
@@ -237,6 +261,9 @@ impl ContentProvider for MediaPlayerBuilder {
                     self.name
                 );
                 yield *IDLE_TEMPLATE;
+                #[cfg(target_os = "windows")]
+                let player = &mpris;
+                #[cfg(target_os = "linux")]
                 let player = mpris.wait_for_player(self.name.clone()).await?;
 
                 info!("Connected to music player: {:?}", player.name().await);

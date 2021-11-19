@@ -53,6 +53,10 @@ apex-simulator = { path = "./apex-simulator", optional = true }
 apex-engine = { path = "./apex-engine", optional = true }
 
 
+[target.'cfg(target_os = "windows")'.dependencies]
+apex-windows = {path = "./apex-windows"}
+
+
 [target.'cfg(target_os = "linux")'.dependencies]
 apex-mpris2 = { path = "./apex-mpris2", optional = true}
 dbus = {version = "0.9", optional = true}
