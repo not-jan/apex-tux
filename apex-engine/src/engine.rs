@@ -1,8 +1,8 @@
 use anyhow::Result;
 use apex_hardware::{AsyncDevice, FrameBuffer};
 use gamesense::raw_client::{
-    FrameContainer, GameEvent, Heartbeat, RawGameSenseClient, RegisterEvent, RegisterGame,
-    RemoveEvent, RemoveGame, ScreenFrameData, Sendable,
+    BindGameEvent, FrameContainer, GameEvent, Heartbeat, RawGameSenseClient, RegisterGame,
+    RemoveEvent, RemoveGame, Screen, ScreenFrameData, ScreenHandler, Sendable,
 };
 use std::future::Future;
 
@@ -15,15 +15,6 @@ const REGISTER_GAME: RegisterGame = RegisterGame {
     display_name: Some("apex-tux"),
     developer: Some("not-jan"),
     timeout: None,
-};
-
-const REGISTER_EVENT: RegisterEvent = RegisterEvent {
-    game: GAME,
-    event: EVENT,
-    min_value: None,
-    max_value: None,
-    icon_id: None,
-    value_optional: None,
 };
 
 pub const REMOVE_EVENT: RemoveEvent = RemoveEvent {
@@ -45,21 +36,33 @@ impl Engine {
         let client = RawGameSenseClient::new()?;
 
         info!("{}", REGISTER_GAME.send(&client).await?);
-        info!("{}", REGISTER_EVENT.send(&client).await?);
 
-        Ok(Self {
-            client: RawGameSenseClient::new()?,
-        })
+        let x = BindGameEvent {
+            game: GAME,
+            event: EVENT,
+            min_value: None,
+            max_value: None,
+            icon_id: None,
+            value_optional: Some(true),
+            handlers: vec![ScreenHandler {
+                device: "screened-128x40",
+                mode: "screen",
+                zone: "one",
+                datas: vec![Screen {
+                    has_text: false,
+                    image_data: vec![0u8; 640],
+                }],
+            }],
+        }
+        .send(&client)
+        .await?;
+        info!("{}", x);
+
+        Ok(Self { client })
     }
 
     pub async fn heartbeat(&self) -> Result<()> {
         info!("{}", HEARTBEAT.send(&self.client).await?);
-        Ok(())
-    }
-
-    pub async fn stop(&self) -> Result<()> {
-        info!("{}", REMOVE_EVENT.send(&self.client).await?);
-        info!("{}", REMOVE_GAME.send(&self.client).await?);
         Ok(())
     }
 }
@@ -67,6 +70,7 @@ impl Engine {
 impl AsyncDevice for Engine {
     type ClearResult<'a> = impl Future<Output = Result<()>> + 'a;
     type DrawResult<'a> = impl Future<Output = Result<()>> + 'a;
+    type ShutdownResult<'a> = impl Future<Output = Result<()>> + 'a;
 
     #[allow(clippy::needless_lifetimes)]
     fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this> {
@@ -95,6 +99,15 @@ impl AsyncDevice for Engine {
         async {
             let empty = FrameBuffer::new();
             self.draw(&empty).await?;
+            Ok(())
+        }
+    }
+
+    #[allow(clippy::needless_lifetimes)]
+    fn shutdown<'this>(&'this mut self) -> Self::ShutdownResult<'this> {
+        async {
+            info!("{}", REMOVE_EVENT.send(&self.client).await?);
+            info!("{}", REMOVE_GAME.send(&self.client).await?);
             Ok(())
         }
     }

@@ -3,7 +3,6 @@
     generic_associated_types,
     type_alias_impl_trait,
     const_fn_trait_bound,
-    format_args_capture,
     once_cell,
     try_blocks,
     const_fn_floating_point_arithmetic,
@@ -34,11 +33,10 @@
 extern crate embedded_graphics;
 
 use anyhow::Result;
-use futures::pin_mut;
 use log::warn;
-use std::{sync::Arc, time::Duration};
 
-#[cfg(feature = "dbus-support")]
+// This is kind of pointless on non-Linux platforms
+#[cfg(all(feature = "dbus-support", target_os = "linux"))]
 mod dbus;
 
 mod providers;
@@ -56,15 +54,11 @@ use crate::render::{scheduler, scheduler::Scheduler};
 #[cfg(all(feature = "engine"))]
 use apex_engine::Engine;
 use apex_hardware::AsyncDevice;
-#[cfg(feature = "usb")]
+#[cfg(all(feature = "usb", target_os = "linux", not(feature = "engine")))]
 use apex_hardware::USBDevice;
 use log::{info, LevelFilter};
 use simplelog::{Config as LoggerConfig, SimpleLogger};
-use tokio::{
-    sync::{broadcast, mpsc},
-    task::JoinHandle,
-    time::MissedTickBehavior,
-};
+use tokio::sync::broadcast;
 
 use apex_input::Command;
 
@@ -74,37 +68,15 @@ pub async fn main() -> Result<()> {
     SimpleLogger::init(LevelFilter::Info, LoggerConfig::default())?;
 
     // This channel is used to send commands to the scheduler
-    let (tx, mut rx) = broadcast::channel::<Command>(100);
-    let mut rx2 = tx.subscribe();
+    let (tx, rx) = broadcast::channel::<Command>(100);
     #[cfg(all(feature = "usb", target_family = "unix", not(feature = "engine")))]
     let mut device = USBDevice::try_connect()?;
 
-    #[cfg(all(feature = "usb"))]
+    #[cfg(any(feature = "usb", feature = "engine"))]
     let hkm = apex_input::InputManager::new(tx.clone());
 
     #[cfg(all(feature = "engine"))]
     let mut device = Engine::new().await?;
-    let ctl = device.clone();
-
-    let handle: JoinHandle<Result<()>> = tokio::spawn(async move {
-        let mut ticker = tokio::time::interval(Duration::from_secs(10));
-        ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
-        loop {
-            tokio::select! {
-                _ = ticker.tick() => {
-
-                    ctl.heartbeat().await?;
-                },
-                v = rx2.recv() => {
-                    if let Ok(Command::Shutdown) = v {
-                        break;
-                    }
-                }
-            }
-        }
-        ctl.stop().await?;
-        Ok(())
-    });
 
     let mut settings = config::Config::default();
     settings
@@ -128,10 +100,7 @@ pub async fn main() -> Result<()> {
     })?;
 
     scheduler.start(rx, settings).await?;
-    #[cfg(all(feature = "usb", target_family = "unix"))]
+    #[cfg(any(feature = "usb", feature = "engine"))]
     drop(hkm);
-
-    handle.abort();
-
     Ok(())
 }
