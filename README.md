@@ -43,6 +43,8 @@ Other devices may be compatible and all that is needed is to add the ID to apex-
 
 Enter the following data from [here](https://gist.github.com/ToadKing/d26f8f046a3b707e9e4b9821be5c9efc) (Shoutout to @ToadKing).
 
+If those don't work and lead to an "Access denied" error please try the rules by [FrankGrimm](https://github.com/https://github.com/FrankGrimm) from [here](https://github.com/FrankGrimm/apex7tkl_linux).
+
 ### Rust
 
 - Install Rust **nightly** using [rustup](https://rustup.rs/)
