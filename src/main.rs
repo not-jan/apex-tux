@@ -7,10 +7,9 @@
     try_blocks,
     const_fn_floating_point_arithmetic,
     inherent_associated_types,
-    const_generics_defaults,
     box_into_pin,
     async_closure,
-    async_stream,
+    async_iterator,
     decl_macro
 )]
 #![warn(clippy::pedantic)]
