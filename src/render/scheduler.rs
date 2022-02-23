@@ -118,6 +118,12 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
                 config.get_bool(&key).unwrap_or(true)
             })
             .map(|(name, i)| {
+                let key = format!("{}.priority", name);
+                let prio = config.get_int(&key).unwrap_or(99i64);
+                (name, i, prio)
+            })
+            .sorted_by_key(|(_, _, prio)| *prio)
+            .map(|(name, i, _)| {
                 i.map_err(|e| anyhow!("Failed to initialize provider: {}. Error: {}", name, e))
             })
             .partition_result();
