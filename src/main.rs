@@ -2,12 +2,9 @@
 #![feature(
     generic_associated_types,
     type_alias_impl_trait,
-    const_fn_trait_bound,
-    once_cell,
     try_blocks,
     const_fn_floating_point_arithmetic,
     inherent_associated_types,
-    box_into_pin,
     async_closure,
     async_iterator,
     decl_macro

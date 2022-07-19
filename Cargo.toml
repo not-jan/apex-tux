@@ -1,6 +1,6 @@
 [package]
 name = "apex-tux"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 
 [workspace]
@@ -51,6 +51,7 @@ apex-input = {path = "./apex-input" }
 apex-music = { path = "./apex-music" }
 apex-simulator = { path = "./apex-simulator", optional = true }
 apex-engine = { path = "./apex-engine", optional = true }
+lazy_static = "1.4.0"
 
 
 [target.'cfg(target_os = "windows")'.dependencies]
