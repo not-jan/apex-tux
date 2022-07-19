@@ -16,19 +16,21 @@ use embedded_graphics::{
     Drawable,
 };
 use futures::Stream;
+use lazy_static::lazy_static;
 use linkme::distributed_slice;
 use log::info;
 use reqwest::{header, Client, ClientBuilder};
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, lazy::SyncLazy, time::Duration};
+use std::{convert::TryFrom, time::Duration};
 use tinybmp::Bmp;
 use tokio::{time, time::MissedTickBehavior};
 
 static BTC_ICON: &[u8] = include_bytes!("./../../assets/btc.bmp");
 
-static BTC_BMP: SyncLazy<Bmp<BinaryColor>> = SyncLazy::new(|| {
-    Bmp::<BinaryColor>::from_slice(BTC_ICON).expect("Failed to parse BMP for BTC icon!")
-});
+lazy_static! {
+    static ref BTC_BMP: Bmp<'static, BinaryColor> =
+        Bmp::<BinaryColor>::from_slice(BTC_ICON).expect("Failed to parse BMP for BTC icon!");
+}
 
 #[distributed_slice(CONTENT_PROVIDERS)]
 pub static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = register_callback;

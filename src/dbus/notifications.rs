@@ -19,9 +19,10 @@ use dbus_tokio::connection;
 use embedded_graphics::pixelcolor::BinaryColor;
 use futures::{channel::mpsc, StreamExt};
 use futures_core::Stream;
+use lazy_static::lazy_static;
 use linkme::distributed_slice;
 use log::{debug, info};
-use std::{convert::TryFrom, lazy::SyncLazy, time::Duration};
+use std::{convert::TryFrom, time::Duration};
 use tinybmp::Bmp;
 
 #[distributed_slice(NOTIFICATION_PROVIDERS)]
@@ -35,9 +36,10 @@ fn register_callback() -> Result<Box<dyn NotificationWrapper>> {
 }
 
 static DISCORD_ICON: &[u8] = include_bytes!("./../../assets/discord.bmp");
-
-static DISCORD_ICON_BMP: SyncLazy<Bmp<BinaryColor>> =
-    SyncLazy::new(|| Bmp::<BinaryColor>::from_slice(DISCORD_ICON).expect("Failed to parse BMP"));
+lazy_static! {
+    static ref DISCORD_ICON_BMP: Bmp<'static, BinaryColor> =
+        Bmp::<BinaryColor>::from_slice(DISCORD_ICON).expect("Failed to parse BMP");
+}
 
 pub struct Dbus {}
 

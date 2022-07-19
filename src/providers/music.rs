@@ -3,18 +3,13 @@ use crate::render::display::ContentProvider;
 use anyhow::anyhow;
 use anyhow::Result;
 use async_stream::try_stream;
-use embedded_graphics::{
-    geometry::Size,
-    image::Image,
-    pixelcolor::BinaryColor,
-    prelude::{Point, },
-
-    Drawable,
-};
 #[cfg(not(target_os = "windows"))]
 use embedded_graphics::prelude::Primitive;
 #[cfg(not(target_os = "windows"))]
 use embedded_graphics::primitives::{Line, PrimitiveStyle};
+use embedded_graphics::{
+    geometry::Size, image::Image, pixelcolor::BinaryColor, prelude::Point, Drawable,
+};
 use futures_core::stream::Stream;
 use linkme::distributed_slice;
 
@@ -26,41 +21,43 @@ use crate::render::{
     scheduler::{ContentWrapper, CONTENT_PROVIDERS},
     text::{ScrollableBuilder, StatefulScrollable},
 };
-use apex_music::{AsyncPlayer, Metadata};
+use apex_music::{AsyncPlayer, Metadata, Progress};
 use config::Config;
 use embedded_graphics::{
     mono_font::{ascii, MonoTextStyle},
     text::{Baseline, Text},
 };
 use futures::StreamExt;
-use apex_music::Progress;
-use std::{convert::TryInto, lazy::SyncLazy, sync::Arc};
+use std::{convert::TryInto, sync::Arc};
 use tokio::time::{Duration, MissedTickBehavior};
 
 use apex_hardware::FrameBuffer;
 use apex_music::PlaybackStatus;
 use futures::pin_mut;
+use lazy_static::lazy_static;
 
 static NOTE_ICON: &[u8] = include_bytes!("./../../assets/note.bmp");
 static PAUSE_ICON: &[u8] = include_bytes!("./../../assets/pause.bmp");
 
-static PAUSE_BMP: SyncLazy<Bmp<BinaryColor>> = SyncLazy::new(|| {
-    Bmp::<BinaryColor>::from_slice(PAUSE_ICON).expect("Failed to parse BMP for pause icon!")
-});
+lazy_static! {
+    static ref PAUSE_BMP: Bmp<'static, BinaryColor> =
+        Bmp::<BinaryColor>::from_slice(PAUSE_ICON).expect("Failed to parse BMP for pause icon!");
+}
 
-static NOTE_BMP: SyncLazy<Bmp<BinaryColor>> = SyncLazy::new(|| {
-    Bmp::<BinaryColor>::from_slice(NOTE_ICON).expect("Failed to parse BMP for note icon!")
-});
-
-// Windows doesn't expose the current progress within the song so we don't draw it here
-// TODO: Spice this up?
+lazy_static! {
+    static ref NOTE_BMP: Bmp<'static, BinaryColor> =
+        Bmp::<BinaryColor>::from_slice(NOTE_ICON).expect("Failed to parse BMP for note icon!");
+}
 #[cfg(target_os = "windows")]
-static PLAYER_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
-    FrameBuffer::new()
-});
+lazy_static! {
+// Windows doesn't expose the current progress within the song so we don't draw
+// it here TODO: Spice this up?
+static ref PLAYER_TEMPLATE: FrameBuffer = FrameBuffer::new();
+}
 
 #[cfg(not(target_os = "windows"))]
-static PLAYER_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
+lazy_static! {
+static ref PLAYER_TEMPLATE: FrameBuffer = {
     let mut base = FrameBuffer::new();
     let style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
 
@@ -71,7 +68,7 @@ static PLAYER_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
     ];
 
     // Draw a border for the progress bar
-        points
+    points
         .iter()
         .try_for_each(|(first, second)| {
             Line::new(*first, *second)
@@ -81,37 +78,41 @@ static PLAYER_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
         .expect("Failed to prepare template image for music player!");
 
     base
-});
-
-static PLAY_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
-    let mut base = *PLAYER_TEMPLATE;
-    Image::new(&*NOTE_BMP, Point::new(5, 5))
+};
+}
+lazy_static! {
+    static ref PLAY_TEMPLATE: FrameBuffer = {
+        let mut base = *PLAYER_TEMPLATE;
+        Image::new(&*NOTE_BMP, Point::new(5, 5))
+            .draw(&mut base)
+            .expect("Failed to prepare 'play' template for music player");
+        base
+    };
+}
+lazy_static! {
+    static ref PAUSE_TEMPLATE: FrameBuffer = {
+        let mut base = *PLAYER_TEMPLATE;
+        Image::new(&*PAUSE_BMP, Point::new(5, 5))
+            .draw(&mut base)
+            .expect("Failed to prepare 'pause' template for music player");
+        base
+    };
+}
+lazy_static! {
+    static ref IDLE_TEMPLATE: FrameBuffer = {
+        let mut base = *PAUSE_TEMPLATE;
+        let style = MonoTextStyle::new(&ascii::FONT_6X10, BinaryColor::On);
+        Text::with_baseline(
+            "No player found",
+            Point::new(5 + 3 + 24, 3),
+            style,
+            Baseline::Top,
+        )
         .draw(&mut base)
-        .expect("Failed to prepare 'play' template for music player");
-    base
-});
-
-static PAUSE_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
-    let mut base = *PLAYER_TEMPLATE;
-    Image::new(&*PAUSE_BMP, Point::new(5, 5))
-        .draw(&mut base)
-        .expect("Failed to prepare 'pause' template for music player");
-    base
-});
-
-static IDLE_TEMPLATE: SyncLazy<FrameBuffer> = SyncLazy::new(|| {
-    let mut base = *PAUSE_TEMPLATE;
-    let style = MonoTextStyle::new(&ascii::FONT_6X10, BinaryColor::On);
-    Text::with_baseline(
-        "No player found",
-        Point::new(5 + 3 + 24, 3),
-        style,
-        Baseline::Top,
-    )
-    .draw(&mut base)
-    .expect("Failed to prepare 'idle' template for music player");
-    base
-});
+        .expect("Failed to prepare 'idle' template for music player");
+        base
+    };
+}
 
 static UNKNOWN_TITLE: &str = "Unknown title";
 static UNKNOWN_ARTIST: &str = "Unknown artist";
@@ -240,9 +241,6 @@ impl ContentProvider for MediaPlayerBuilder {
             "Trying to connect to DBUS with player preference: {:?}",
             self.name
         );
-
-
-
 
         let mut renderer = MediaPlayerRenderer::new()?;
 
