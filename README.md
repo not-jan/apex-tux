@@ -33,6 +33,7 @@ Source: [Arch Wiki](https://wiki.archlinux.org/title/MPRIS#Supported_clients)
 ## Supported devices
 This currently supports the following devices:
 - Apex Pro
+- Apex 5
 - Apex 7 (untested)
 
 Other devices may be compatible and all that is needed is to add the ID to apex-hardware/src/usb.rs. 
