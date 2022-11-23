@@ -1,6 +1,6 @@
 use anyhow::Result;
-use apex_hardware::{Device, FrameBuffer, USBDevice};
-use clap::Parser;
+use apex_hardware::{Device, USBDevice};
+use clap::{ArgAction, Parser, Subcommand};
 use log::{info, LevelFilter};
 use simplelog::{Config as LoggerConfig, SimpleLogger};
 
@@ -8,13 +8,13 @@ use simplelog::{Config as LoggerConfig, SimpleLogger};
 #[clap(version = "1.0", author = "not-jan")]
 struct Opts {
     /// A level of verbosity, and can be used multiple times
-    #[clap(short, long, parse(from_occurrences))]
-    verbose: i32,
-    #[clap(subcommand)]
+    #[arg(short, long, action = ArgAction::Count)]
+    verbose: u8,
+    #[command(subcommand)]
     subcmd: SubCommand,
 }
 
-#[derive(Parser)]
+#[derive(Subcommand)]
 enum SubCommand {
     /// Clear the OLED screen
     Clear,
