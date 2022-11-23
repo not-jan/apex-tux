@@ -12,7 +12,7 @@ enabled = true
 # You can check what to put here by using tools like D-Feet
 # preferred_player = "Lollypop"
 
-[crypto]
+[coindesk]
 enabled = true
 # Valid choices are "gbp", "usd" and "eur"
 # Default is USD
