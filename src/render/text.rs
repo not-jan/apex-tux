@@ -56,7 +56,7 @@ impl DrawTarget for ScrollableCanvas {
     }
 
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
-        self.canvas.set_all(color.is_on());
+        self.canvas.fill(color.is_on());
         Ok(())
     }
 }
