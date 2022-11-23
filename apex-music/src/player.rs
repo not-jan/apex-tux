@@ -9,7 +9,6 @@ pub enum PlaybackStatus {
     Playing,
 }
 
-
 #[derive(Clone, Debug)]
 pub enum PlayerEvent {
     Seeked,
