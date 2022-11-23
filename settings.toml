@@ -3,7 +3,7 @@ enabled = true
 # Set this to the highest priority so it will start with the clock
 # priority = 1
 # Enables a twelve hour clock instead of the 24hr one
-# Defaults to your lcoal format if unset
+# Defaults to your local format if unset
 # twelve_hour = false
 
 [mpris2]
