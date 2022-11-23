@@ -93,22 +93,18 @@ impl Player {
 impl AsyncPlayer for Player {
     type Metadata = Metadata;
 
-    type MetadataFuture<'b>
+    type MetadataFuture<'b> = impl Future<Output = Result<Self::Metadata>> + 'b
     where
-        Self: 'b,
-    = impl Future<Output = Result<Self::Metadata>> + 'b;
-    type NameFuture<'b>
+        Self: 'b;
+    type NameFuture<'b> = impl Future<Output = String> + 'b
     where
-        Self: 'b,
-    = impl Future<Output = String> + 'b;
-    type PlaybackStatusFuture<'b>
+        Self: 'b;
+    type PlaybackStatusFuture<'b> = impl Future<Output = Result<PlaybackStatus>> + 'b
     where
-        Self: 'b,
-    = impl Future<Output = Result<PlaybackStatus>> + 'b;
-    type PositionFuture<'b>
+        Self: 'b;
+    type PositionFuture<'b> = impl Future<Output = Result<i64>> + 'b
     where
-        Self: 'b,
-    = impl Future<Output = Result<i64>> + 'b;
+        Self: 'b;
     #[allow(clippy::needless_lifetimes)]
     fn metadata<'this>(&'this self) -> Self::MetadataFuture<'this> {
         async {

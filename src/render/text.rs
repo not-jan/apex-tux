@@ -98,7 +98,7 @@ impl StatefulScrollable {
     /// * `text`: the new text
     ///
     /// returns: Result<bool, Error>
-    ///  
+    ///
     /// # Examples
     ///
     /// ```

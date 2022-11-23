@@ -72,22 +72,18 @@ pub trait AsyncPlayer {
 impl<T: Player + Sized> AsyncPlayer for T {
     type Metadata = <T as Player>::Metadata;
 
-    type MetadataFuture<'a>
+    type MetadataFuture<'a> = impl Future<Output = Result<Self::Metadata>> + 'a
     where
-        T: 'a,
-    = impl Future<Output = Result<Self::Metadata>> + 'a;
-    type NameFuture<'a>
+        T: 'a;
+    type NameFuture<'a> = impl Future<Output = String>
     where
-        T: 'a,
-    = impl Future<Output = String>;
-    type PlaybackStatusFuture<'a>
+        T: 'a;
+    type PlaybackStatusFuture<'a> = impl Future<Output = Result<PlaybackStatus>>
     where
-        T: 'a,
-    = impl Future<Output = Result<PlaybackStatus>>;
-    type PositionFuture<'a>
+        T: 'a;
+    type PositionFuture<'a> = impl Future<Output = Result<i64>>
     where
-        T: 'a,
-    = impl Future<Output = Result<i64>>;
+        T: 'a;
 
     #[allow(clippy::needless_lifetimes)]
     fn metadata<'this>(&'this self) -> Self::MetadataFuture<'this> {
@@ -137,18 +133,15 @@ pub trait AsyncMetadata {
 
 /// Blanket implementation for non-async Metadata sources
 impl<T: Metadata + Sized> AsyncMetadata for T {
-    type ArtistsFuture<'a>
+    type ArtistsFuture<'a> = impl Future<Output = Result<String>> + 'a
     where
-        T: 'a,
-    = impl Future<Output = Result<String>> + 'a;
-    type LengthFuture<'a>
+        T: 'a;
+    type LengthFuture<'a> = impl Future<Output = Result<i64>> + 'a
     where
-        T: 'a,
-    = impl Future<Output = Result<i64>> + 'a;
-    type TitleFuture<'a>
+        T: 'a;
+    type TitleFuture<'a> = impl Future<Output = Result<String>> + 'a
     where
-        T: 'a,
-    = impl Future<Output = Result<String>> + 'a;
+        T: 'a;
 
     #[allow(clippy::needless_lifetimes)]
     fn title<'this>(&'this self) -> Self::TitleFuture<'this> {

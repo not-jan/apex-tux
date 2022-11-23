@@ -121,18 +121,15 @@ impl<T: Device> AsyncDevice for T
 where
     T: 'static,
 {
-    type ClearResult<'a>
+    type ClearResult<'a> = impl Future<Output = Result<()>> + 'a
     where
-        Self: 'a,
-    = impl Future<Output = Result<()>> + 'a;
-    type DrawResult<'a>
+        Self: 'a;
+    type DrawResult<'a> = impl Future<Output = Result<()>> + 'a
     where
-        Self: 'a,
-    = impl Future<Output = Result<()>> + 'a;
-    type ShutdownResult<'a>
+        Self: 'a;
+    type ShutdownResult<'a> = impl Future<Output = Result<()>> + 'a
     where
-        Self: 'a,
-    = impl Future<Output = Result<()>> + 'a;
+        Self: 'a;
 
     #[allow(clippy::needless_lifetimes)]
     fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this> {
