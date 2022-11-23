@@ -75,7 +75,7 @@ impl AsyncDevice for Engine {
     #[allow(clippy::needless_lifetimes)]
     fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this> {
         async {
-            let screen = display.framebuffer.as_buffer();
+            let screen = display.framebuffer.as_raw_slice();
 
             let event = GameEvent {
                 game: GAME,
