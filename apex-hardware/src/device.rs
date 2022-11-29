@@ -11,13 +11,13 @@ pub struct FrameBuffer {
     /// trailing null byte. This is done to prevent superfluous copies when
     /// sending the image to a display device. The implementations of
     /// `Drawable` and `DrawTarget` take this quirk into account.
-    pub framebuffer: BitArray<Msb0, [u8; 40 * 128 / 8 + 2]>,
+    pub framebuffer: BitArray<[u8; 40 * 128 / 8 + 2], Msb0>,
 }
 
 impl Default for FrameBuffer {
     fn default() -> Self {
-        let mut framebuffer = BitArray::<Msb0, [u8; 642]>::zeroed();
-        framebuffer.as_mut_buffer()[0] = 0x61;
+        let mut framebuffer = BitArray::<[u8; 642], Msb0>::ZERO;
+        framebuffer.as_raw_mut_slice()[0] = 0x61;
         FrameBuffer { framebuffer }
     }
 }
@@ -122,17 +122,11 @@ where
     T: 'static,
 {
     type ClearResult<'a>
-    where
-        Self: 'a,
-    = impl Future<Output = Result<()>> + 'a;
+    = impl Future<Output = Result<()>> + 'a where Self: 'a;
     type DrawResult<'a>
-    where
-        Self: 'a,
-    = impl Future<Output = Result<()>> + 'a;
+    = impl Future<Output = Result<()>> + 'a where Self: 'a;
     type ShutdownResult<'a>
-    where
-        Self: 'a,
-    = impl Future<Output = Result<()>> + 'a;
+    = impl Future<Output = Result<()>> + 'a where Self: 'a;
 
     #[allow(clippy::needless_lifetimes)]
     fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this> {

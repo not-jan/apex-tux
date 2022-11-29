@@ -1,6 +1,5 @@
 #![allow(incomplete_features)]
 #![feature(
-    generic_associated_types,
     type_alias_impl_trait,
     try_blocks,
     const_fn_floating_point_arithmetic,
@@ -51,6 +50,8 @@ use crate::render::{scheduler, scheduler::Scheduler};
 use apex_engine::Engine;
 use apex_hardware::AsyncDevice;
 #[cfg(all(feature = "usb", target_os = "linux", not(feature = "engine")))]
+use apex_hardware::USBDevice;
+#[cfg(all(feature = "usb", target_os = "macos", not(feature = "engine")))]
 use apex_hardware::USBDevice;
 use log::{info, LevelFilter};
 use simplelog::{Config as LoggerConfig, SimpleLogger};

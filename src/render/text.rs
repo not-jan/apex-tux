@@ -56,7 +56,7 @@ impl DrawTarget for ScrollableCanvas {
     }
 
     fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
-        self.canvas.set_all(color.is_on());
+        self.canvas.fill(color.is_on());
         Ok(())
     }
 }
@@ -71,6 +71,7 @@ pub struct ScrollableBuilder {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct StatefulScrollable {
     builder: ScrollableBuilder,
     pub text: Scrollable,
@@ -88,6 +89,7 @@ impl TryFrom<ScrollableBuilder> for StatefulScrollable {
     }
 }
 
+#[allow(dead_code)]
 impl StatefulScrollable {
     /// Re-renders the scrollable text if the text changed. Returns `Ok(true)`
     /// if the text was updated, `Ok(false)` if the text was not updated or
@@ -122,6 +124,7 @@ impl StatefulScrollable {
     }
 }
 
+#[allow(dead_code)]
 impl ScrollableBuilder {
     pub fn new() -> Self {
         Self::default()
@@ -209,6 +212,7 @@ impl Drawable for Scrollable {
     }
 }
 
+#[allow(dead_code)]
 impl Scrollable {
     pub fn at_tick<D>(&self, target: &mut D, tick: u32) -> Result<(), <D as DrawTarget>::Error>
     where

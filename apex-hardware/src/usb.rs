@@ -66,7 +66,7 @@ impl Device for USBDevice {
     fn draw(&mut self, display: &FrameBuffer) -> Result<()> {
         Ok(self
             .handle
-            .send_feature_report(display.framebuffer.as_buffer())?)
+            .send_feature_report(display.framebuffer.as_raw_slice())?)
     }
 
     fn clear(&mut self) -> Result<()> {
