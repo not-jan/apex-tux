@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.44"
-clap = "3.0.0-beta.5"
+clap = { version = "4.0.26", features = ["derive"] }
 log = "0.4.14"
 simplelog = "0.10.2"
 apex-hardware = { path = "../apex-hardware", features= ["usb"] }

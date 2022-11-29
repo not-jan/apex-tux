@@ -4,6 +4,8 @@ use embedded_graphics::{pixelcolor::BinaryColor, prelude::*};
 #[cfg(feature = "async")]
 use std::future::Future;
 
+const FB_SIZE: usize = 40 * 128 / 8 + 2;
+
 #[derive(Copy, Clone, Debug)]
 pub struct FrameBuffer {
     /// The framebuffer with one bit value per pixel.
@@ -11,13 +13,13 @@ pub struct FrameBuffer {
     /// trailing null byte. This is done to prevent superfluous copies when
     /// sending the image to a display device. The implementations of
     /// `Drawable` and `DrawTarget` take this quirk into account.
-    pub framebuffer: BitArray<Msb0, [u8; 40 * 128 / 8 + 2]>,
+    pub framebuffer: BitArray<[u8; FB_SIZE], Msb0>,
 }
 
 impl Default for FrameBuffer {
     fn default() -> Self {
-        let mut framebuffer = BitArray::<Msb0, [u8; 642]>::zeroed();
-        framebuffer.as_mut_buffer()[0] = 0x61;
+        let mut framebuffer = BitArray::<[u8; FB_SIZE], Msb0>::ZERO;
+        framebuffer.as_raw_mut_slice()[0] = 0x61;
         FrameBuffer { framebuffer }
     }
 }
@@ -121,18 +123,15 @@ impl<T: Device> AsyncDevice for T
 where
     T: 'static,
 {
-    type ClearResult<'a>
+    type ClearResult<'a> = impl Future<Output = Result<()>> + 'a
     where
-        Self: 'a,
-    = impl Future<Output = Result<()>> + 'a;
-    type DrawResult<'a>
+        Self: 'a;
+    type DrawResult<'a> = impl Future<Output = Result<()>> + 'a
     where
-        Self: 'a,
-    = impl Future<Output = Result<()>> + 'a;
-    type ShutdownResult<'a>
+        Self: 'a;
+    type ShutdownResult<'a> = impl Future<Output = Result<()>> + 'a
     where
-        Self: 'a,
-    = impl Future<Output = Result<()>> + 'a;
+        Self: 'a;
 
     #[allow(clippy::needless_lifetimes)]
     fn draw<'this>(&'this mut self, display: &'this FrameBuffer) -> Self::DrawResult<'this> {

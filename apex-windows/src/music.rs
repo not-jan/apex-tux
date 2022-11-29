@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
 use apex_music::{AsyncPlayer, Metadata as MetadataTrait, PlaybackStatus, PlayerEvent, Progress};
-use std::future::Future;
 use futures_core::stream::Stream;
+use std::future::Future;
 
-use std::time::Duration;
 use async_stream::stream;
+use std::time::Duration;
 use tokio::time::MissedTickBehavior;
 use windows::Media::{
     Control,
@@ -82,7 +82,7 @@ impl Player {
     pub async fn stream(&self) -> Result<impl Stream<Item = PlayerEvent>> {
         let mut timer = tokio::time::interval(Duration::from_millis(100));
         timer.set_missed_tick_behavior(MissedTickBehavior::Skip);
-        Ok(stream!{
+        Ok(stream! {
             loop {
                 timer.tick().await;
                 yield PlayerEvent::Timer;
@@ -93,34 +93,29 @@ impl Player {
 impl AsyncPlayer for Player {
     type Metadata = Metadata;
 
-    type MetadataFuture<'b>
+    type MetadataFuture<'b> = impl Future<Output = Result<Self::Metadata>> + 'b
     where
-        Self: 'b,
-    = impl Future<Output = Result<Self::Metadata>> + 'b;
-    type NameFuture<'b>
+        Self: 'b;
+    type NameFuture<'b> = impl Future<Output = String> + 'b
     where
-        Self: 'b,
-    = impl Future<Output = String> + 'b;
-    type PlaybackStatusFuture<'b>
+        Self: 'b;
+    type PlaybackStatusFuture<'b> = impl Future<Output = Result<PlaybackStatus>> + 'b
     where
-        Self: 'b,
-    = impl Future<Output = Result<PlaybackStatus>> + 'b;
-    type PositionFuture<'b>
+        Self: 'b;
+    type PositionFuture<'b> = impl Future<Output = Result<i64>> + 'b
     where
-        Self: 'b,
-    = impl Future<Output = Result<i64>> + 'b;
+        Self: 'b;
+
     #[allow(clippy::needless_lifetimes)]
     fn metadata<'this>(&'this self) -> Self::MetadataFuture<'this> {
         async {
             let session = self.media_properties().await?;
             let title = session.Title()?.to_string_lossy();
             let artists = session.Artist()?.to_string_lossy();
-            Ok(Metadata {
-                title,
-                artists
-            })
+            Ok(Metadata { title, artists })
         }
     }
+
     #[allow(clippy::needless_lifetimes)]
     fn playback_status<'this>(&'this self) -> Self::PlaybackStatusFuture<'this> {
         async {
@@ -146,12 +141,14 @@ impl AsyncPlayer for Player {
             })
         }
     }
+
     #[allow(clippy::needless_lifetimes)]
     fn name<'this>(&'this self) -> Self::NameFuture<'this> {
         // There might be a Windows API to find the name of the player but the user most
         // likely will never see this anyway
         async { String::from("windows-api") }
     }
+
     #[allow(clippy::needless_lifetimes)]
     fn position<'this>(&'this self) -> Self::PositionFuture<'this> {
         // TODO: Find the API for this?

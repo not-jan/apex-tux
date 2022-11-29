@@ -4,6 +4,7 @@ use crate::render::{
 };
 use anyhow::Result;
 use async_stream::try_stream;
+use config::Config;
 use embedded_graphics::{
     pixelcolor::BinaryColor,
     prelude::Point,
@@ -22,7 +23,7 @@ use tokio::{
 static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = register_callback;
 
 #[allow(clippy::unnecessary_wraps)]
-fn register_callback() -> Result<Box<dyn ContentWrapper>> {
+fn register_callback(_config: &Config) -> Result<Box<dyn ContentWrapper>> {
     info!("Registering dummy display source.");
     let provider = Box::new(DummyProvider {});
     Ok(provider)

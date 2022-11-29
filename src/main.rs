@@ -1,6 +1,5 @@
 #![allow(incomplete_features)]
 #![feature(
-    generic_associated_types,
     type_alias_impl_trait,
     try_blocks,
     const_fn_floating_point_arithmetic,
