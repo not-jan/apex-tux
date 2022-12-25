@@ -184,9 +184,12 @@ impl MediaPlayerRenderer {
 
         #[cfg(not(target_os = "windows"))]
         {
-            let length = metadata
-                .length()
-                .map_err(|_| anyhow!("Couldn't get length!"))? as f64;
+            let length_result = metadata.length();
+            let length = match length_result {
+                Ok(val) => val as f64,
+                Err(_) => 0 as f64,
+            };
+
             let current = progress.position as f64;
 
             let completion = (current / length).clamp(0_f64, 1_f64);

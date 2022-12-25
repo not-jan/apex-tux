@@ -35,8 +35,8 @@ impl MetadataTrait for Metadata {
         )
     }
 
-    fn length(&self) -> Result<i64> {
-        ::dbus::arg::prop_cast::<i64>(&self.0, "mpris:length")
+    fn length(&self) -> Result<u64> {
+        ::dbus::arg::prop_cast::<u64>(&self.0, "mpris:length")
             .copied()
             .ok_or_else(|| anyhow!("Couldn't get length!"))
     }
