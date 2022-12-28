@@ -19,7 +19,7 @@ pub enum PlayerEvent {
 pub trait Metadata {
     fn title(&self) -> Result<String>;
     fn artists(&self) -> Result<String>;
-    fn length(&self) -> Result<i64>;
+    fn length(&self) -> Result<u64>;
 }
 
 pub trait Player {
@@ -116,7 +116,7 @@ pub trait AsyncMetadata {
     type ArtistsFuture<'a>: Future<Output = Result<String>> + 'a
     where
         Self: 'a;
-    type LengthFuture<'a>: Future<Output = Result<i64>> + 'a
+    type LengthFuture<'a>: Future<Output = Result<u64>> + 'a
     where
         Self: 'a;
 
@@ -135,7 +135,7 @@ impl<T: Metadata + Sized> AsyncMetadata for T {
     type ArtistsFuture<'a> = impl Future<Output = Result<String>> + 'a
     where
         T: 'a;
-    type LengthFuture<'a> = impl Future<Output = Result<i64>> + 'a
+    type LengthFuture<'a> = impl Future<Output = Result<u64>> + 'a
     where
         T: 'a;
     type TitleFuture<'a> = impl Future<Output = Result<String>> + 'a
