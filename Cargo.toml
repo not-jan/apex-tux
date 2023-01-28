@@ -69,8 +69,7 @@ dbus-support = ["dbus", "dbus-tokio", "apex-mpris2"]
 http = ["serde", "serde_json", "reqwest"]
 crypto = ["http"]
 simulator = ["apex-simulator"]
-usb = ["apex-hardware/usb", "apex-input/hotkeys"]
+usb = ["apex-hardware/usb"]
+hotkeys = ["apex-input/hotkeys"]
 engine = ["apex-engine"]
 debug = []
-
-
