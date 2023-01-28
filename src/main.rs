@@ -68,7 +68,7 @@ pub async fn main() -> Result<()> {
     #[cfg(all(feature = "usb", target_family = "unix", not(feature = "engine")))]
     let mut device = USBDevice::try_connect()?;
 
-    #[cfg(any(feature = "usb", feature = "engine"))]
+    #[cfg(feature = "hotkeys")]
     let hkm = apex_input::InputManager::new(tx.clone());
 
     #[cfg(all(feature = "engine"))]
@@ -96,7 +96,9 @@ pub async fn main() -> Result<()> {
     })?;
 
     scheduler.start(rx, settings).await?;
-    #[cfg(any(feature = "usb", feature = "engine"))]
+
+    #[cfg(feature = "hotkeys")]
     drop(hkm);
+
     Ok(())
 }
