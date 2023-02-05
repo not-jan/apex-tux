@@ -13,8 +13,7 @@ use std::{
 #[cfg(feature = "hwmon")]
 use libmedium::{
     parse_hwmons,
-    sensors::{temp::TempSensor, Sensor},
-    ParsingError
+    sensors::{temp::TempSensor, Sensor}
 };
 
 #[cfg(feature = "cpuinfo")]

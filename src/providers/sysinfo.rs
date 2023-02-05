@@ -66,6 +66,9 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     Ok(Box::new(Sysinfo {
         cpu, mem, net, tick, last_tick, temp: 0.0,
         polling_interval: config.get_int("sysinfo.polling_interval").unwrap_or(2000) as u64,
+        net_load_max: config.get_float("sysinfo.net_load_max").unwrap_or(100.0),
+        cpu_frequency_max: config.get_float("sysinfo.cpu_frequency_max").unwrap_or(7.0),
+        temperature_max: config.get_float("sysinfo.temperature_max").unwrap_or(100.0),
         net_interface_name: config.get_str("sysinfo.net_interface_name").unwrap_or("eth0".to_string()),
         hwmon_name: config.get_str("sysinfo.hwmon_name").unwrap_or("hwmon0".to_string()),
         hwmon_sensor_name: config.get_str("sysinfo.hwmon_sensor_name").unwrap_or("CPU Temperature".to_string()),
@@ -82,6 +85,10 @@ struct Sysinfo {
     last_tick: i64,
 
     polling_interval: u64,
+
+    net_load_max: f64,
+    cpu_frequency_max: f64,
+    temperature_max: f64,
 
     net_interface_name: String,
     hwmon_name: String,
@@ -112,10 +119,10 @@ impl Sysinfo {
         let mut buffer = FrameBuffer::new();
 
         self.render_stat(0, &mut buffer, format!("C: {:>4.0}%", load), load / 100.0)?;
-        self.render_stat(1, &mut buffer, format!("F: {:>4.2}G", freq), freq / 7.0)?;
+        self.render_stat(1, &mut buffer, format!("F: {:>4.2}G", freq), freq / self.cpu_frequency_max)?;
         self.render_stat(2, &mut buffer, format!("M: {:>4.1}G", mem_used), self.mem.used as f64 / self.mem.total as f64)?;
-        self.render_stat(3, &mut buffer, format!("{}: {:>4}{}", net_direction, adjusted_net_load, net_load_unit), net_load / (100.0 * 1024_f64.pow(2)))?;
-        self.render_stat(4, &mut buffer, format!("T: {:>4.1}C", self.temp), self.temp / 100.0)?;
+        self.render_stat(3, &mut buffer, format!("{}: {:>4}{}", net_direction, adjusted_net_load, net_load_unit), net_load / (self.net_load_max * 1024_f64.pow(2)))?;
+        self.render_stat(4, &mut buffer, format!("T: {:>4.1}C", self.temp), self.temp / self.temperature_max)?;
 
         Ok(buffer)
     }
