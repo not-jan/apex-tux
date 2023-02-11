@@ -17,7 +17,7 @@ Make use of your OLED screen instead of letting the SteelSeries logo burn itself
 - Discord notifications (requires DBus)
 - Bitcoin price
 - Clock
-- System Stats (see [requirements](#sysinfo-dependencies))
+- System Stats
 - Scrolling text
 - No burn-in from constantly displaying a static image
 
@@ -62,10 +62,6 @@ If those don't work and lead to an "Access denied" error please try the rules by
   - If you **don't** run DBus you have to disable the dbus feature: `cargo build --release --no-default-features --features crypto,usb`
   - Otherwise just run `cargo build --release`
   - If you **don't** have an Apex device around at the moment or want to develop more easily you can enable the simulator: `cargo build --release --no-default-features --features crypto,clock,dbus-support,simulator`
-
-### Sysinfo Dependencies
-
-Compiling the `sysinfo` (system stats) feature also requires `libstatgrab` and `lm_sensors` to be installed on your machine. This module only works on Linux. `libstatgrab` itself is written for cross-platform support, but the `sysinfo` module uses Linux-specific methods to acquire temperature and CPU frequency stats (split out as subfeatures of `apex-sysinfo`: `hwmon` and `cpuinfo` respectively).
 
 ## Configuration
 

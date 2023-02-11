@@ -5,9 +5,7 @@ use crate::{
 use anyhow::Result;
 use apex_hardware::FrameBuffer;
 use async_stream::try_stream;
-use num_traits::{ToPrimitive, pow, Pow};
-
-use std::mem;
+use num_traits::{pow, Pow};
 
 use config::Config;
 use embedded_graphics::{
@@ -20,26 +18,16 @@ use embedded_graphics::{
 };
 use futures::Stream;
 use linkme::distributed_slice;
-use log::info;
+use log::{info, warn};
 use tokio::{
     time,
     time::{Duration, MissedTickBehavior},
 };
 
-use apex_sysinfo::{
-    get_cpufreq,
-    get_hwmon_temp,
-    sg_init,
-    sg_shutdown,
-    sg_cpu_percents,
-    sg_get_cpu_percents_of,
-    sg_get_cpu_stats_diff,
-    sg_cpu_percent_source_sg_last_diff_cpu_percent,
-    sg_mem_stats,
-    sg_get_mem_stats,
-    sg_network_io_stats,
-    sg_get_network_io_stats_diff,
-    sg_get_network_io_stats
+use sysinfo::{
+    System, SystemExt,
+    RefreshKind, CpuRefreshKind,
+    CpuExt, NetworkData, NetworkExt, NetworksExt, ComponentExt
 };
 
 #[doc(hidden)]
@@ -55,31 +43,32 @@ fn tick() -> i64 {
 fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     info!("Registering Sysinfo display source.");
 
-    unsafe { sg_init(1); }
+    let refreshes = RefreshKind::new().
+        with_cpu(CpuRefreshKind::everything()).
+        with_components_list().
+        with_components().
+        with_networks_list().
+        with_networks().
+        with_memory();
+    let sys = System::new_with_specifics(refreshes);
 
-    let cpu : sg_cpu_percents = unsafe { mem::zeroed() };
-    let mem : sg_mem_stats = unsafe { mem::zeroed() };
-    let net : sg_network_io_stats = unsafe { mem::zeroed() };
     let tick = tick();
     let last_tick = 0;
 
     Ok(Box::new(Sysinfo {
-        cpu, mem, net, tick, last_tick, temp: 0.0,
+        sys, tick, last_tick, refreshes,
         polling_interval: config.get_int("sysinfo.polling_interval").unwrap_or(2000) as u64,
         net_load_max: config.get_float("sysinfo.net_load_max").unwrap_or(100.0),
         cpu_frequency_max: config.get_float("sysinfo.cpu_frequency_max").unwrap_or(7.0),
         temperature_max: config.get_float("sysinfo.temperature_max").unwrap_or(100.0),
         net_interface_name: config.get_str("sysinfo.net_interface_name").unwrap_or("eth0".to_string()),
-        hwmon_name: config.get_str("sysinfo.hwmon_name").unwrap_or("hwmon0".to_string()),
-        hwmon_sensor_name: config.get_str("sysinfo.hwmon_sensor_name").unwrap_or("CPU Temperature".to_string()),
+        sensor_name: config.get_str("sysinfo.sensor_name").unwrap_or("hwmon0 CPU Temperature".to_string()),
     }))
 }
 
 struct Sysinfo {
-    cpu: sg_cpu_percents,
-    mem: sg_mem_stats,
-    net: sg_network_io_stats,
-    temp: f64,
+    sys: System,
+    refreshes: RefreshKind,
 
     tick: i64,
     last_tick: i64,
@@ -91,44 +80,55 @@ struct Sysinfo {
     temperature_max: f64,
 
     net_interface_name: String,
-    hwmon_name: String,
-    hwmon_sensor_name: String
-}
-
-impl Drop for Sysinfo {
-    fn drop(&mut self) {
-        unsafe { sg_shutdown(); }
-    }
+    sensor_name: String,
 }
 
 impl Sysinfo {
     pub fn render(&mut self) -> Result<FrameBuffer> {
         self.poll();
 
-        let load = 100.0 - self.cpu.idle;
-        let freq = get_cpufreq()? / 1000.0;
-        let mem_used = self.mem.used as f64 / pow(1024, 3) as f64;
-        let net_direction = if self.net.rx > self.net.tx {"I"} else {"O"};
-        let (net_load, net_load_power, net_load_unit) = self.calculate_max_net_rate();
-        let mut adjusted_net_load = format!("{:.4}", (net_load / 1024_f64.pow(net_load_power)).to_string());
-
-        if adjusted_net_load.ends_with(".") {
-            adjusted_net_load = adjusted_net_load.replace(".", "");
-        }
+        let load = self.sys.global_cpu_info().cpu_usage() as f64;
+        let freq = self.sys.global_cpu_info().frequency() as f64 / 1000.0;
+        let mem_used = self.sys.used_memory() as f64 / pow(1024, 3) as f64;
 
         let mut buffer = FrameBuffer::new();
 
         self.render_stat(0, &mut buffer, format!("C: {:>4.0}%", load), load / 100.0)?;
         self.render_stat(1, &mut buffer, format!("F: {:>4.2}G", freq), freq / self.cpu_frequency_max)?;
-        self.render_stat(2, &mut buffer, format!("M: {:>4.1}G", mem_used), self.mem.used as f64 / self.mem.total as f64)?;
-        self.render_stat(3, &mut buffer, format!("{}: {:>4}{}", net_direction, adjusted_net_load, net_load_unit), net_load / (self.net_load_max * 1024_f64.pow(2)))?;
-        self.render_stat(4, &mut buffer, format!("T: {:>4.1}C", self.temp), self.temp / self.temperature_max)?;
+        self.render_stat(2, &mut buffer, format!("M: {:>4.1}G", mem_used), self.sys.used_memory() as f64 / self.sys.total_memory() as f64)?;
+
+        self.sys.networks().iter().find(|(name, _)|
+            **name == self.net_interface_name
+        ).map(|t| t.1).map(|n| {
+            let net_direction = if n.received() > n.transmitted() {"I"} else {"O"};
+
+            let (net_load, net_load_power, net_load_unit) = self.calculate_max_net_rate(n);
+            let mut adjusted_net_load = format!("{:.4}", (net_load / 1024_f64.pow(net_load_power)).to_string());
+
+            if adjusted_net_load.ends_with(".") {
+                adjusted_net_load = adjusted_net_load.replace(".", "");
+            }
+
+            self.render_stat(3, &mut buffer, format!("{}: {:>4}{}", net_direction, adjusted_net_load, net_load_unit), net_load / (self.net_load_max * 1024_f64.pow(2)))
+        }).unwrap_or_else(|| {
+            warn!("couldn't find net interface `{}`", self.net_interface_name);
+            Ok(())
+        })?;
+
+        self.sys.components().iter().find(|component|
+            component.label() == self.sensor_name
+        ).map(|c| {
+            self.render_stat(4, &mut buffer, format!("T: {:>4.1}C", c.temperature()), c.temperature() as f64 / self.temperature_max)
+        }).unwrap_or_else(|| {
+            warn!("couldn't find sensor `{}`", self.sensor_name);
+            Ok(())
+        })?;
 
         Ok(buffer)
     }
 
-    fn calculate_max_net_rate(&self) -> (f64, i32, &str) {
-        let max_diff = std::cmp::max(self.net.rx, self.net.tx) as f64;
+    fn calculate_max_net_rate(&self, net : &NetworkData) -> (f64, i32, &str) {
+        let max_diff = std::cmp::max(net.received(), net.transmitted()) as f64;
         let max_rate = max_diff / ((self.tick - self.last_tick) as f64 / 1000.0);
 
         match max_rate {
@@ -140,29 +140,10 @@ impl Sysinfo {
     }
 
     fn poll(&mut self) {
-        self.temp = get_hwmon_temp(&self.hwmon_name, &self.hwmon_sensor_name);
+        self.sys.refresh_specifics(self.refreshes);
 
-        unsafe {
-            let null = std::ptr::null_mut();
-            let mut num_ifaces : usize = 0;
-
-            sg_get_cpu_stats_diff(null);
-            self.cpu = *sg_get_cpu_percents_of(sg_cpu_percent_source_sg_last_diff_cpu_percent, null);
-            self.mem = *sg_get_mem_stats(null);
-
-            let ifaces_ptr = sg_get_network_io_stats_diff(&mut num_ifaces);
-            let ifaces = std::slice::from_raw_parts(ifaces_ptr, num_ifaces);
-
-            self.net = *ifaces.iter().find(|iface| {
-                let name = std::ffi::CStr::from_ptr(iface.interface_name);
-
-                name.to_str().expect("could not retrieve name of network interface!")  == self.net_interface_name
-            }).expect("could not find network interface!");
-
-            sg_get_network_io_stats(null);
-            self.last_tick = self.tick;
-            self.tick = tick();
-        }
+        self.last_tick = self.tick;
+        self.tick = tick();
     }
 
     fn render_stat(&self, slot: i32, buffer: &mut FrameBuffer, text : String, fill : f64) -> Result<()> {
@@ -182,7 +163,9 @@ impl Sysinfo {
         let bar_start: i32 = metrics.bounding_box.size.width as i32 + 2;
         let border_style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
         let fill_style = PrimitiveStyle::with_fill(BinaryColor::On);
-        let fill_width = (fill * (127 - bar_start) as f64).floor() as i32;
+        let fill_width = if fill.is_infinite() { 0 } else {
+            (fill * (127 - bar_start) as f64).floor() as i32
+        };
 
         Rectangle::with_corners(
             Point::new(bar_start, slot_y),

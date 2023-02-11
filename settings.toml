@@ -29,9 +29,8 @@ polling_interval = 1500
 # The maximum value for the temperature stat bar (in degC), used for scaling its fill
 # temperature_max = 100
 # Network interface name used in network I/O stat bar
-# To find values for this config, use the `ip link` command
+# To find values for this config in Linux, use the `ip link` command
 # net_interface_name = "eth0"
-# hwmon sensor array & sensor name used in temperature stat bar
-# To find values for these configs, use the `sensors` command
-# hwmon_name = "asus_wmi_sensors"
-# hwmon_sensor_name = "CPU Temperature"
+# sensor name used in temperature stat bar
+# To find values for this config in Linux, use the `sensors` command
+# sensor_name = "asus_wmi_sensors CPU Temperature"
