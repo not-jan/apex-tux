@@ -8,7 +8,6 @@ edition = "2021"
 members = [
     "apex-ctl",
     "apex-hardware",
-    "apex-sysinfo",
     "apex-mpris2",
     "apex-music",
     "apex-simulator",
@@ -52,7 +51,7 @@ apex-input = {path = "./apex-input" }
 apex-music = { path = "./apex-music" }
 apex-simulator = { path = "./apex-simulator", optional = true }
 apex-engine = { path = "./apex-engine", optional = true }
-apex-sysinfo = { path = "./apex-sysinfo", optional = true }
+sysinfo = { version = "0.27.7", optional = true }
 lazy_static = "1.4.0"
 
 
@@ -74,5 +73,5 @@ simulator = ["apex-simulator"]
 usb = ["apex-hardware/usb"]
 hotkeys = ["apex-input/hotkeys"]
 engine = ["apex-engine"]
-sysinfo = ["apex-sysinfo"]
+sysinfo = ["dep:sysinfo"]
 debug = []
