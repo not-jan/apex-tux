@@ -6,7 +6,8 @@
     inherent_associated_types,
     async_closure,
     async_iterator,
-    decl_macro
+    decl_macro,
+    impl_trait_in_assoc_type
 )]
 #![warn(clippy::pedantic)]
 // `clippy::mut_mut` is disabled because `futures::stream::select!` causes the lint to fire
