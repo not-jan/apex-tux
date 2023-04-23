@@ -20,6 +20,14 @@ pub struct Player<'a>(Proxy<'a, Arc<SyncConnection>>);
 #[derive(Debug)]
 pub struct Metadata(PropMap);
 
+impl Metadata {
+    fn length_<T>(&self) -> Result<T> {
+        ::dbus::arg::prop_cast::<T>(&self.0, "mpris:length")
+            .copied()
+            .ok_or_else(|| anyhow!("Couldn't get length!"))
+    }
+}
+
 impl MetadataTrait for Metadata {
     fn title(&self) -> Result<String> {
         ::dbus::arg::prop_cast::<String>(&self.0, "xesam:title")
@@ -36,9 +44,11 @@ impl MetadataTrait for Metadata {
     }
 
     fn length(&self) -> Result<u64> {
-        ::dbus::arg::prop_cast::<u64>(&self.0, "mpris:length")
-            .copied()
-            .ok_or_else(|| anyhow!("Couldn't get length!"))
+        match (self.length_::<i64>(), self.length_::<u64>()) {
+            (_, Ok(val)) => Ok(val),
+            (Ok(val), _) => Ok(val as u64),
+            (_, _) => Err(anyhow!("Couldn't get length!"))
+        }
     }
 }
 
