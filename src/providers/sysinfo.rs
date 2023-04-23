@@ -63,7 +63,7 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
 	).is_none(){
 		warn!("Couldn't find network interface `{}`", net_interface_name);
 		info!("Instead, found those interfaces:");
-		for (interface_name, _unused) in sys.networks() {
+		for (interface_name, _) in sys.networks() {
 			info!("\t{}", interface_name);
 		}
 	}
