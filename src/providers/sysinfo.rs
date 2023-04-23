@@ -55,14 +55,41 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     let tick = tick();
     let last_tick = 0;
 
+
+	let net_interface_name = config.get_str("sysinfo.net_interface_name").unwrap_or("eth0".to_string());
+
+	if sys.networks().iter().find(|(name, _)|
+		**name == net_interface_name
+	).is_none(){
+		warn!("Couldn't find network interface `{}`", net_interface_name);
+		info!("Instead, found those interfaces:");
+		for (interface_name, _) in sys.networks() {
+			info!("\t{}", interface_name);
+		}
+	}
+
+
+	let sensor_name = config.get_str("sysinfo.sensor_name").unwrap_or("hwmon0 CPU Temperature".to_string());
+
+	if sys.components().iter().find(|component|
+		component.label() == sensor_name
+	).is_none() {
+		warn!("Couldn't find sensor `{}`", sensor_name);
+		info!("Instead, found those sensors:");
+		for component in sys.components() {
+			info!("\t{:?}", component);
+		}
+		
+	}
+
     Ok(Box::new(Sysinfo {
         sys, tick, last_tick, refreshes,
         polling_interval: config.get_int("sysinfo.polling_interval").unwrap_or(2000) as u64,
         net_load_max: config.get_float("sysinfo.net_load_max").unwrap_or(100.0),
         cpu_frequency_max: config.get_float("sysinfo.cpu_frequency_max").unwrap_or(7.0),
         temperature_max: config.get_float("sysinfo.temperature_max").unwrap_or(100.0),
-        net_interface_name: config.get_str("sysinfo.net_interface_name").unwrap_or("eth0".to_string()),
-        sensor_name: config.get_str("sysinfo.sensor_name").unwrap_or("hwmon0 CPU Temperature".to_string()),
+        net_interface_name,
+        sensor_name,
     }))
 }
 
@@ -97,9 +124,9 @@ impl Sysinfo {
         self.render_stat(1, &mut buffer, format!("F: {:>4.2}G", freq), freq / self.cpu_frequency_max)?;
         self.render_stat(2, &mut buffer, format!("M: {:>4.1}G", mem_used), self.sys.used_memory() as f64 / self.sys.total_memory() as f64)?;
 
-        self.sys.networks().iter().find(|(name, _)|
+        if let Some(n) = self.sys.networks().iter().find(|(name, _)|
             **name == self.net_interface_name
-        ).map(|t| t.1).map(|n| {
+        ).map(|t| t.1){
             let net_direction = if n.received() > n.transmitted() {"I"} else {"O"};
 
             let (net_load, net_load_power, net_load_unit) = self.calculate_max_net_rate(n);
@@ -109,20 +136,14 @@ impl Sysinfo {
                 adjusted_net_load = adjusted_net_load.replace(".", "");
             }
 
-            self.render_stat(3, &mut buffer, format!("{}: {:>4}{}", net_direction, adjusted_net_load, net_load_unit), net_load / (self.net_load_max * 1024_f64.pow(2)))
-        }).unwrap_or_else(|| {
-            warn!("couldn't find net interface `{}`", self.net_interface_name);
-            Ok(())
-        })?;
+            let _ = self.render_stat(3, &mut buffer, format!("{}: {:>4}{}", net_direction, adjusted_net_load, net_load_unit), net_load / (self.net_load_max * 1024_f64.pow(2)));
+        };
 
-        self.sys.components().iter().find(|component|
+		if let Some(c) = self.sys.components().iter().find(|component|
             component.label() == self.sensor_name
-        ).map(|c| {
-            self.render_stat(4, &mut buffer, format!("T: {:>4.1}C", c.temperature()), c.temperature() as f64 / self.temperature_max)
-        }).unwrap_or_else(|| {
-            warn!("couldn't find sensor `{}`", self.sensor_name);
-            Ok(())
-        })?;
+        ){
+            let _ = self.render_stat(4, &mut buffer, format!("T: {:>4.1}C", c.temperature()), c.temperature() as f64 / self.temperature_max);
+		}
 
         Ok(buffer)
     }
