@@ -51,6 +51,7 @@ apex-input = {path = "./apex-input" }
 apex-music = { path = "./apex-music" }
 apex-simulator = { path = "./apex-simulator", optional = true }
 apex-engine = { path = "./apex-engine", optional = true }
+sysinfo = { version = "0.27.7", optional = true }
 lazy_static = "1.4.0"
 
 
@@ -69,8 +70,8 @@ dbus-support = ["dbus", "dbus-tokio", "apex-mpris2"]
 http = ["serde", "serde_json", "reqwest"]
 crypto = ["http"]
 simulator = ["apex-simulator"]
-usb = ["apex-hardware/usb", "apex-input/hotkeys"]
+usb = ["apex-hardware/usb"]
+hotkeys = ["apex-input/hotkeys"]
 engine = ["apex-engine"]
+sysinfo = ["dep:sysinfo"]
 debug = []
-
-
