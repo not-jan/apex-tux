@@ -21,7 +21,7 @@ pub struct Player<'a>(Proxy<'a, Arc<SyncConnection>>);
 pub struct Metadata(PropMap);
 
 impl Metadata {
-    fn length_<T>(&self) -> Result<T> {
+    fn length_<T: Copy + Sized + 'static>(&self) -> Result<T> {
         ::dbus::arg::prop_cast::<T>(&self.0, "mpris:length")
             .copied()
             .ok_or_else(|| anyhow!("Couldn't get length!"))
