@@ -124,9 +124,9 @@ impl Sysinfo {
         self.render_stat(1, &mut buffer, format!("F: {:>4.2}G", freq), freq / self.cpu_frequency_max)?;
         self.render_stat(2, &mut buffer, format!("M: {:>4.1}G", mem_used), self.sys.used_memory() as f64 / self.sys.total_memory() as f64)?;
 
-        self.sys.networks().iter().find(|(name, _)|
+        if let Some(n) = self.sys.networks().iter().find(|(name, _)|
             **name == self.net_interface_name
-        ).map(|t| t.1).map(|n| {
+        ).map(|t| t.1){
             let net_direction = if n.received() > n.transmitted() {"I"} else {"O"};
 
             let (net_load, net_load_power, net_load_unit) = self.calculate_max_net_rate(n);
@@ -136,14 +136,14 @@ impl Sysinfo {
                 adjusted_net_load = adjusted_net_load.replace(".", "");
             }
 
-            self.render_stat(3, &mut buffer, format!("{}: {:>4}{}", net_direction, adjusted_net_load, net_load_unit), net_load / (self.net_load_max * 1024_f64.pow(2)))
-        });
+            let _ = self.render_stat(3, &mut buffer, format!("{}: {:>4}{}", net_direction, adjusted_net_load, net_load_unit), net_load / (self.net_load_max * 1024_f64.pow(2)));
+        };
 
-        self.sys.components().iter().find(|component|
+		if let Some(c) = self.sys.components().iter().find(|component|
             component.label() == self.sensor_name
-        ).map(|c| {
-            self.render_stat(4, &mut buffer, format!("T: {:>4.1}C", c.temperature()), c.temperature() as f64 / self.temperature_max)
-        });
+        ){
+            let _ = self.render_stat(4, &mut buffer, format!("T: {:>4.1}C", c.temperature()), c.temperature() as f64 / self.temperature_max);
+		}
 
         Ok(buffer)
     }
