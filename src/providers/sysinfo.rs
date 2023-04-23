@@ -55,6 +55,19 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     let tick = tick();
     let last_tick = 0;
 
+	let sensor_name = config.get_str("sysinfo.sensor_name").unwrap_or("hwmon0 CPU Temperature".to_string());
+
+	if sys.components().iter().find(|component|
+		component.label() == sensor_name
+	).is_none() {
+		warn!("Couldn't find sensor `{}`", sensor_name);
+		info!("Instead, found those:");
+		for component in sys.components() {
+			info!("\t{:?}", component);
+		}
+		
+	}
+
     Ok(Box::new(Sysinfo {
         sys, tick, last_tick, refreshes,
         polling_interval: config.get_int("sysinfo.polling_interval").unwrap_or(2000) as u64,
@@ -62,7 +75,7 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
         cpu_frequency_max: config.get_float("sysinfo.cpu_frequency_max").unwrap_or(7.0),
         temperature_max: config.get_float("sysinfo.temperature_max").unwrap_or(100.0),
         net_interface_name: config.get_str("sysinfo.net_interface_name").unwrap_or("eth0".to_string()),
-        sensor_name: config.get_str("sysinfo.sensor_name").unwrap_or("hwmon0 CPU Temperature".to_string()),
+        sensor_name,
     }))
 }
 
@@ -119,10 +132,7 @@ impl Sysinfo {
             component.label() == self.sensor_name
         ).map(|c| {
             self.render_stat(4, &mut buffer, format!("T: {:>4.1}C", c.temperature()), c.temperature() as f64 / self.temperature_max)
-        }).unwrap_or_else(|| {
-            warn!("couldn't find sensor `{}`", self.sensor_name);
-            Ok(())
-        })?;
+        });
 
         Ok(buffer)
     }
