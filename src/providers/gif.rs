@@ -113,7 +113,6 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
 			}
 			if i %(8*4)  == 0 && i != 0{
 				image.push(buf);
-				println!("image len {} ", image.len());
 				buf = 0;
 			}
 			if i % 4 == 3{
