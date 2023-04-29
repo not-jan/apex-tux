@@ -97,7 +97,7 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
 
 	while let Some(frame) = decoder.read_next_frame().unwrap() {
 		
-		let median_color = calculate_median_color_value(&frame);
+		let median_color = calculate_median_color_value(frame);
 
 		let mut image = Vec::new();
 		let mut buf: u8 = 0;
