@@ -17,6 +17,7 @@ use embedded_graphics::{
 };
 use futures::Stream;
 use gif::{Decoder, Frame};
+use image::ImageBuffer;
 use linkme::distributed_slice;
 use log::info;
 use tokio::{
@@ -27,6 +28,9 @@ use std::fs::File;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 static ACTUAL_FRAME: AtomicUsize = AtomicUsize::new(0);
+
+static DISPLAY_HEIGHT: u16 = 40;
+static DISPLAY_WIDTH: u16 = 128;
 
 #[doc(hidden)]
 #[distributed_slice(CONTENT_PROVIDERS)]
@@ -101,38 +105,35 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
 
 		let mut image = Vec::new();
 		let mut buf: u8 = 0;
+		let width= u64::from(frame.width);
 
-		let mut buf_r:u8 = 0;
-		let mut buf_g:u8 = 0; 
-		let mut buf_b:u8 = 0; 
-		for (i, byte) in frame.buffer.iter().enumerate() {
-			if i % 4 == 0 && i != 0 {
-				buf_r = 0;
-				buf_g = 0;
-				buf_b = 0;
-			}
-			if i %(8*4)  == 0 && i != 0{
-				image.push(buf);
-				buf = 0;
-			}
-			if i % 4 == 3{
-				if (buf_r/3 + buf_g/3 + buf_b/3)>= median_color{
-					let shift = ((i-3)/4)%8;
+		let pixels = &frame.buffer;
+		for y in 0..DISPLAY_HEIGHT{
+			for x in 0..DISPLAY_WIDTH{
+				if x % 8 == 0  && x != 0{
+					image.push(buf);
+					buf = 0;
+				} 
+				if x as u64 >= width{
+					continue;
+				}
+				let start:u64 = ((y as u64) * width + (x as u64))*4;
+				
+				let pixel_r = pixels.get(start as usize).unwrap_or(&0);
+				let pixel_g = pixels.get((start+1) as usize).unwrap_or(&0);
+				let pixel_b = pixels.get((start+2) as usize).unwrap_or(&0);
+
+				let mean = pixel_r/3 + pixel_g/3 + pixel_b/3;
+
+				if mean >= median_color{
+					let shift = x%8;
 					buf = buf + ( 128 >> shift ) ;
 				}
+
 			}
-			if i %4 == 0 { 
-				buf_r  = *byte;
-			}
-			if i %4 == 1 { 
-				buf_g  = *byte;
-			}
-			if i %4 == 2 { 
-				buf_b  = *byte;
-			}
-			
-        }
-		image.push(buf);
+			image.push(buf);
+			buf = 0;
+		}
         decoded_frames.push(convert_vec_to_array(image));
     }
 
