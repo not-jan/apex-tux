@@ -135,20 +135,6 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
 		image.push(buf);
         decoded_frames.push(convert_vec_to_array(image));
     }
-/* 
-	while let Some(frame) = decoder.read_next_frame().unwrap() {
-        let mut image = Vec::new();
-
-        // Decode the pixels in the frame.
-        for byte in frame.buffer.iter() {
-            // Iterate over each bit in the byte to extract the individual pixels.
-            for i in (0..8).rev() {
-                let pixel = (byte >> i) & 0x01;
-                image.push(pixel);
-            }
-        }
-		
-	}*/
 
     Ok(Box::new(Gif { decoded_frames}))
 }
@@ -182,16 +168,6 @@ impl Gif {
 
 		// Draw the image onto the buffer
 		frame_image.draw(&mut buffer)?;
-
-		// Clear the screen before drawing the next frame
-		//buffer.clear(BinaryColor::Off)?;
-
-		// Update the display
-		// Note: You will need to replace `update_display()` with your actual display update code
-		//update_display(&buffer)?;
-
-		// Wait for a short time to show the frame
-		//std::thread::sleep(std::time::Duration::from_millis(50));
         
 
         Ok(buffer)
