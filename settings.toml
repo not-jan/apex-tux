@@ -34,3 +34,6 @@ polling_interval = 1500
 # sensor name used in temperature stat bar
 # To find values for this config in Linux, use the `sensors` command
 # sensor_name = "asus_wmi_sensors CPU Temperature"
+
+[gif]
+path = "gifs/sample_1.gif"

@@ -88,7 +88,7 @@ fn convert_vec_to_array<T, const N: usize>(v: Vec<T>) -> [T; N] {
 fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     info!("Registering Gif display source.");
 
-    let gif_file = File::open("tests/sample_1.gif").unwrap();
+    let gif_file = File::open(config.get_str("gif.path").unwrap_or("gifs/sample_1.gif".to_string())).unwrap();
 
 	let mut decoder = gif::DecodeOptions::new();
 
