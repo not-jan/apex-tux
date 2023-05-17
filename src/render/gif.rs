@@ -23,44 +23,60 @@ pub struct Gif{
 
 impl Gif{
 
+	pub fn calculate_median_color_value(frame: &Frame, gif_height: i32, gif_width: i32) -> u8 {
+		//NOTE we're using the median to determine wether the pixel should be black or white 
 
-	pub fn calculate_median_color_value(frame: &Frame) -> u8 {
-		//TODO it's reading the whole frame, it should only read what's going to be printed
-		//TODO redo the function, 
-
-
-		let mut colors = (0..=255).into_iter().map(|_| 0).collect::<Vec<u32>>();
-		let num_pixels = frame.width as u32 * frame.height as u32;
+		let mut colors = (0..=255).into_iter().map(|_| 0).collect::<Vec<u8>>();
 	
-		let mut buf_r:u8 = 0;
-		let mut buf_g:u8 = 0; 
-		let mut buf_b:u8 = 0; 
-		for (i, byte) in frame.buffer.iter().enumerate() {
-			if i % 4 == 0 && i != 0 {
-				buf_r = 0;
-				buf_g = 0;
-				buf_b = 0;
+		//the u64 is just in case someone put a gif that's huge (in terms of resolution), it shouldn't break
+		let width= u64::from(frame.width);
+		let height= u64::from(frame.height);
+		
+		let num_pixels = gif_width as u32 * gif_height as u32;
+
+		let pixels = &frame.buffer;
+
+		for y in 0..gif_height{
+			//if x is outside of the gif width
+			if y as u64 >= height{
+				continue;
 			}
-			if i % 4 == 3{
-				colors[((buf_r/3 + buf_g/3 + buf_b/3)) as usize] += u32::from(byte / 255);
+
+			//if x is outside of the screen
+			if y >= DISPLAY_HEIGHT{
+				continue;
 			}
-			if i %4 == 0 { 
-				buf_r  = *byte;
+			for x in 0..gif_width{
+				//if x is outside of the gif width
+				if x as u64 >= width{
+					continue;
+				}
+
+				//if x is outside of the screen
+				if x >= DISPLAY_WIDTH{
+					continue;
+				}
+
+				//calculating the index
+				let start:u64 = ((y as u64) * width + (x as u64))*4;
+
+				//getting the value of the pixels
+				let pixel_r = pixels.get(start as usize).unwrap_or(&0);
+				let pixel_g = pixels.get((start+1) as usize).unwrap_or(&0);
+				let pixel_b = pixels.get((start+2) as usize).unwrap_or(&0);
+				let pixel_a = pixels.get((start+3) as usize).unwrap_or(&0);
+
+				//the value is multiplied by the alpha of said pixel
+				//the more the pixel is transparent, the less the pixel has an importance
+				colors [(pixel_r/3 + pixel_g/3 + pixel_b/3) as usize] += pixel_a / 255;
 			}
-			if i %4 == 1 { 
-				buf_g  = *byte;
-			}
-			if i %4 == 2 { 
-				buf_b  = *byte;
-			}
-			
 		}
 	
 		let mut sum = 0;
 		for (color_value, count) in colors.iter().enumerate() {
 			sum += *count;
 	
-			if sum >= num_pixels / 2 {
+			if u32::from(sum) >= num_pixels / 2 {
 				if color_value == 0{
 					return 1;
 				}
@@ -73,7 +89,7 @@ impl Gif{
 
 	pub fn read_frame(frame: &Frame, gif_height: i32, gif_width: i32) -> Vec<u8>{
 
-		let median_color = Self::calculate_median_color_value(frame);
+		let median_color = Self::calculate_median_color_value(frame, gif_height, gif_width);
 
 		let mut image = Vec::new();
 		let mut buf: u8 = 0;
@@ -212,7 +228,7 @@ impl Gif{
 
         //increment the current_frame using atomic operations
         let next_frame = frame + 1;
-		
+
         let has_gif_ended = next_frame >= self.decoded_frames.len();
         if has_gif_ended {
             //reset to frame 0
