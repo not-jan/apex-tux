@@ -2,7 +2,7 @@ use embedded_graphics::{
     pixelcolor::BinaryColor,
     prelude::{Angle, AngleUnit, DrawTarget, Point, Primitive},
     primitives::{Arc, PrimitiveStyle},
-    Drawable,
+    Drawable
 };
 
 pub struct ProgressBar {
