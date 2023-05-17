@@ -23,10 +23,6 @@ pub struct Gif{
 
 impl Gif{
 
-	fn convert_vec_to_array<T, const N: usize>(v: Vec<T>) -> [T; N] {
-		v.try_into()
-			.unwrap_or_else(|v: Vec<T>| panic!("Expected a Vec of length {} but it was {}", N, v.len()))
-	}
 
 	pub fn calculate_median_color_value(frame: &Frame) -> u8 {
 		//TODO it's reading the whole frame, it should only read what's going to be printed
