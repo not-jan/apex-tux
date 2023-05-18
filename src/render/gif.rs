@@ -180,7 +180,7 @@ impl Gif{
 				}
 			},
 			Err(_)=> {
-				warn!("The gif file can't be used, using the default placeholder.");
+				log::error!("The gif file can't be used, using the default placeholder.");
 
 				Self::new_error(origin, stop)
 			}
