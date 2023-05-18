@@ -26,7 +26,7 @@ impl Gif{
 	pub fn calculate_median_color_value(frame: &Frame, gif_height: i32, gif_width: i32) -> u8 {
 		//NOTE we're using the median to determine wether the pixel should be black or white 
 
-		let mut colors = (0..=255).into_iter().map(|_| 0).collect::<Vec<u8>>();
+		let mut colors = (0..=255).into_iter().map(|_| 0).collect::<Vec<u32>>();
 	
 		//the u64 is just in case someone put a gif that's huge (in terms of resolution), it shouldn't break
 		let width= u64::from(frame.width);
@@ -68,7 +68,7 @@ impl Gif{
 
 				//the value is multiplied by the alpha of said pixel
 				//the more the pixel is transparent, the less the pixel has an importance
-				colors [(pixel_r/3 + pixel_g/3 + pixel_b/3) as usize] += pixel_a / 255;
+				colors [(pixel_r/3 + pixel_g/3 + pixel_b/3) as usize] += u32::from(pixel_a / 255);
 			}
 		}
 	
