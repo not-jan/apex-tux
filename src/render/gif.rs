@@ -163,7 +163,7 @@ impl Gif{
 		let decoder_result= std::panic::catch_unwind(||decoder.read_info(file).unwrap());
 
 		let mut decoded_frames = Vec::new();
-		//this is to handle juste in case the file isn't a gif, or isn't parsed correctly
+		//this is to handle juste in case the file isn't a gif, or can't be parsed correctly
 		match decoder_result {
 			Ok(_)=> {
 				let mut decoder = decoder_result.unwrap();
