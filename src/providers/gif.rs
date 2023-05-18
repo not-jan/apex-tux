@@ -30,9 +30,19 @@ pub static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = regis
 fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     info!("Registering Gif display source.");
 
-    let gif_file = File::open(config.get_str("gif.path").unwrap()).unwrap();
+    let gif_path = config.get_str("gif.path").unwrap();
+    let gif_file = File::open(&gif_path);
 
-	let gif = gif::Gif::new(Point::new(0, 0), Point::new(128,40), gif_file);
+    let gif = match gif_file {
+        Ok(file) => gif::Gif::new(Point::new(0, 0), Point::new(128, 40), file),
+        Err(err) => {
+            log::error!("Failed to open GIF file '{}': {}", gif_path, err);
+			
+            // Use the `new_error` function to create an error GIF
+            let error_gif = gif::Gif::new_error(Point::new(0, 0), Point::new(128, 40));
+            error_gif
+        }
+    };
 
     Ok(Box::new(Gif {gif}))
 }
