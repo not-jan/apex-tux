@@ -36,12 +36,12 @@ impl Gif{
 		let pixels = &frame.buffer;
 
 		for y in 0..gif_height{
-			//if x is outside of the gif width
+			//if y is outside of the gif width
 			if y as u64 >= height{
 				continue;
 			}
 
-			//if x is outside of the screen
+			//if y is outside of the screen
 			if y >= DISPLAY_HEIGHT{
 				continue;
 			}
@@ -100,12 +100,12 @@ impl Gif{
 		let pixels = &frame.buffer;
 
 		for y in 0..gif_height{
-			//if x is outside of the gif width
+			//if y is outside of the gif width
 			if y as u64 >= height{
 				continue;
 			}
 
-			//if x is outside of the screen
+			//if y is outside of the screen
 			if y >= DISPLAY_HEIGHT{
 				continue;
 			}
