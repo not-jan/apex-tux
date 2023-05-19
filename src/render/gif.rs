@@ -134,6 +134,8 @@ impl Gif{
 				let pixel_b = pixels.get((start+2) as usize).unwrap_or(&0);
 
 				let mean = pixel_r/3 + pixel_g/3 + pixel_b/3;
+				//I'm not sure if we should do something with the alpha channel of the gif
+				//I decided not to, but maybe we should
 
 				if mean >= median_color{
 					//which bit to turn on
