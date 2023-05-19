@@ -16,6 +16,7 @@ pub struct Gif{
     origin: Point,
     decoded_frames: Vec<Vec<u8>>,
     current_frame: AtomicUsize,
+	delays: Vec<u16>
 }
 
 
@@ -163,6 +164,7 @@ impl Gif{
 		let decoder_result= std::panic::catch_unwind(||decoder.read_info(file).unwrap());
 
 		let mut decoded_frames = Vec::new();
+		let mut delays = Vec::new();
 		//this is to handle juste in case the file isn't a gif, or can't be parsed correctly
 		match decoder_result {
 			Ok(_)=> {
@@ -171,12 +173,14 @@ impl Gif{
 				// Read all the frames in the GIF 
 				while let Some(frame) = decoder.read_next_frame().unwrap() {
 					decoded_frames.push(Self::read_frame(frame, gif_height, gif_width));
+					delays.push(frame.delay);
 				}
 				Self {
 					stop,
 					origin,
 					decoded_frames,
-					current_frame: AtomicUsize::new(0)
+					current_frame: AtomicUsize::new(0),
+					delays,
 				}
 			},
 			Err(_)=> {
@@ -202,19 +206,22 @@ impl Gif{
 		decoder.set_color_output(gif::ColorOutput::RGBA); //TODO we're repeating a those lines, maybe make a function (don't ask me how) 
 
 		let mut decoder = decoder.read_info(u8_array).unwrap();
+
 		let mut decoded_frames = Vec::new();
+		let mut delays = Vec::new();
 
 
 		// Read all the frames in the u8 array.
 		while let Some(frame) = decoder.read_next_frame().unwrap() {
 			decoded_frames.push(Self::read_frame(frame, gif_height, gif_width));
-			
+			delays.push(frame.delay);
 		}
         Self {
             stop,
             origin,
             decoded_frames,
-			current_frame: AtomicUsize::new(0)
+			current_frame: AtomicUsize::new(0),
+			delays,
         }
     }
 
