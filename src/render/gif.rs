@@ -241,12 +241,12 @@ impl Gif{
         let frame_data = &self.decoded_frames[frame];
 		
 		//convert the data to an ImageRaw
-		let raw_gif_frame = ImageRaw::<BinaryColor>::new(&frame_data, 128);
+		let raw_gif_frame = ImageRaw::<BinaryColor>::new(&frame_data, (self.stop.x - self.origin.x) as u32);
 		
 		//draw the ImageRaw on the buffer
 		let _ = Image::new(
 			&raw_gif_frame,
-			Point::new(0, 0)
+			self.origin
 		).draw(target);
 
 		//detect if we should change the frame
