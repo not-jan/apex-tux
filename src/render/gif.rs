@@ -4,7 +4,6 @@ use apex_hardware::FrameBuffer;
 
 use embedded_graphics::{prelude::{Point}, image::{ImageRaw, Image}, pixelcolor::BinaryColor, Drawable};
 use gif::{Frame};
-use log::warn;
 
 static GIF_MISSING: &[u8] = include_bytes!("./../../assets/gif_missing.gif");
 
