@@ -67,7 +67,9 @@ impl ContentProvider for Gif {
     // This needs to be enabled until full GAT support is here
     #[allow(clippy::needless_lifetimes)]
     fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
-        let mut interval = time::interval(Duration::from_millis(100));
+        let mut interval = time::interval(Duration::from_millis(10)); 
+		//the delays in gifs are in increments of 10 ms
+		//https://docs.rs/gif/latest/gif/struct.Frame.html#structfield.delay
         interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
         Ok(try_stream! {
             loop {

@@ -1,4 +1,4 @@
-use std::{sync::atomic::{AtomicUsize, Ordering}, fs::File};
+use std::{sync::atomic::{AtomicUsize, Ordering}, fs::File, rc::Rc, cell::RefCell, time::{Instant, Duration}};
 
 use apex_hardware::FrameBuffer;
 
@@ -16,7 +16,8 @@ pub struct Gif{
     origin: Point,
     decoded_frames: Vec<Vec<u8>>,
     current_frame: AtomicUsize,
-	delays: Vec<u16>
+	delays: Vec<u16>,
+	time_frame_last_update: Rc<RefCell<Instant>>
 }
 
 
@@ -181,6 +182,7 @@ impl Gif{
 					decoded_frames,
 					current_frame: AtomicUsize::new(0),
 					delays,
+					time_frame_last_update: Rc::new(RefCell::new(Instant::now())),
 				}
 			},
 			Err(_)=> {
@@ -222,6 +224,7 @@ impl Gif{
             decoded_frames,
 			current_frame: AtomicUsize::new(0),
 			delays,
+			time_frame_last_update: Rc::new(RefCell::new(Instant::now())),
         }
     }
 
@@ -233,19 +236,6 @@ impl Gif{
     ) -> bool {
         let frame = self.current_frame.load(Ordering::Relaxed);
 
-		//TODO sync the gif with the delay of each frame
-		// https://docs.rs/gif/latest/gif/struct.Frame.html
-
-        //increment the current_frame using atomic operations
-        let next_frame = frame + 1;
-
-        let has_gif_ended = next_frame >= self.decoded_frames.len();
-        if has_gif_ended {
-            //reset to frame 0
-            self.current_frame.store(0, Ordering::Relaxed);
-        } else {
-            self.current_frame.store(next_frame, Ordering::Relaxed);
-        }
 
         //get the data for the specified frame
         let frame_data = &self.decoded_frames[frame];
@@ -259,6 +249,30 @@ impl Gif{
 			Point::new(0, 0)
 		).draw(target);
 
-        has_gif_ended
+		//detect if we should change the frame
+		let last_display_time = self.time_frame_last_update.borrow().clone();
+		let current_time = Instant::now();
+		let elapsed_time = current_time - last_display_time;
+
+		if elapsed_time >= Duration::from_millis(u64::from(self.delays[frame]*10)){
+			//the delays in gifs are in increments of 10 ms
+			//https://docs.rs/gif/latest/gif/struct.Frame.html#structfield.delay
+
+			//update the variable only if we update the frame
+			*self.time_frame_last_update.borrow_mut() = current_time;
+			
+			//increment the current_frame using atomic operations
+			let next_frame = frame + 1;
+
+			let has_gif_ended = next_frame >= self.decoded_frames.len();
+			if has_gif_ended {
+				//reset to frame 0
+				self.current_frame.store(0, Ordering::Relaxed);
+			} else {
+				self.current_frame.store(next_frame, Ordering::Relaxed);
+			}
+			return has_gif_ended;
+		}
+        return false;
     }
 }
