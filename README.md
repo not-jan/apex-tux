@@ -10,6 +10,7 @@ Make use of your OLED screen instead of letting the SteelSeries logo burn itself
 
 ![](./resources/music.png)
 ![](./resources/btc.png)
+![](./resources/system-metrics.png)
 
 ## Features
 
@@ -17,6 +18,7 @@ Make use of your OLED screen instead of letting the SteelSeries logo burn itself
 - Discord notifications (requires DBus)
 - Bitcoin price
 - Clock
+- System metrics
 - Scrolling text
 - No burn-in from constantly displaying a static image
 
@@ -99,7 +101,6 @@ If you have a feature to add or a bug to fix please feel free to open an issue o
 - Windows support
 - Test this on more than one Desktop Environment on X11
 - More providers
-  - System metrics?
   - Games?
   - GIFs?
 - Change the USB crate to something async instead
