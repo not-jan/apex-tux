@@ -6,7 +6,6 @@ use embedded_graphics::{prelude::{Point}, image::{ImageRaw, Image}, pixelcolor::
 use gif::{Frame};
 use log::warn;
 
-//TODO the gif itself is way too fast (made it dirtly in photoshop)
 static GIF_MISSING: &[u8] = include_bytes!("./../../assets/gif_missing.gif");
 
 
