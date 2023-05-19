@@ -227,6 +227,9 @@ impl Gif{
     ) -> bool {
         let frame = self.current_frame.load(Ordering::Relaxed);
 
+		//TODO sync the gif with the delay of each frame
+		// https://docs.rs/gif/latest/gif/struct.Frame.html
+
         //increment the current_frame using atomic operations
         let next_frame = frame + 1;
 
