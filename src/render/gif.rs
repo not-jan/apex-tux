@@ -68,7 +68,7 @@ impl Gif {
                 }
 
                 //calculating the index
-                let start: u64 = ((y as u64) * width + (x as u64)) * 4;
+                let start = ((y as u64) * width as u64 + (x as u64)) * 4;
 
                 //getting the value of the pixels
                 let pixel_r = pixels.get(start as usize).unwrap_or(&0);
