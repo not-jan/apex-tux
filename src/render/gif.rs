@@ -37,8 +37,6 @@ impl Gif {
 
         let mut colors = (0..=255).into_iter().map(|_| 0).collect::<Vec<u32>>();
 
-        //the u64 is just in case someone put a gif that's huge (in terms of
-        // resolution), it shouldn't break
         let width = frame.width;
         let height = frame.height;
 
@@ -68,6 +66,9 @@ impl Gif {
                 }
 
                 //calculating the index
+				// The u64 is just in case someone put a gif that's huge (in terms of
+				// resolution, on the x axis at least, since it's the only one that can 
+				// affect the index), if not, it will break (tested with a 1000*1000px gif)
                 let start = ((y as u64) * width as u64 + (x as u64)) * 4;
 
                 //getting the value of the pixels
