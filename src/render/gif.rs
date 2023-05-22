@@ -39,8 +39,8 @@ impl Gif {
 
         //the u64 is just in case someone put a gif that's huge (in terms of
         // resolution), it shouldn't break
-        let width = u64::from(frame.width);
-        let height = u64::from(frame.height);
+        let width = frame.width;
+        let height = frame.height;
 
         let num_pixels = gif_width as u32 * gif_height as u32;
 
@@ -48,7 +48,7 @@ impl Gif {
 
         for y in 0..gif_height {
             //if y is outside of the gif width
-            if y as u64 >= height {
+            if y >= height as i32 {
                 continue;
             }
 
@@ -58,7 +58,7 @@ impl Gif {
             }
             for x in 0..gif_width {
                 //if x is outside of the gif width
-                if x as u64 >= width {
+                if x >= width as i32 {
                     continue;
                 }
 
