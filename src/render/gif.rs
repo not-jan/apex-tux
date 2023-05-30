@@ -159,7 +159,7 @@ impl Gif {
             image.push(buf);
             buf = 0;
         }
-        return image;
+        image
     }
 
     pub fn new(origin: Point, stop: Point, file: File) -> Self {
@@ -271,6 +271,6 @@ impl Gif {
             }
             return has_gif_ended;
         }
-        return false;
+        false
     }
 }
