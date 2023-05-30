@@ -87,7 +87,7 @@ impl Gif {
         for (color_value, count) in colors.iter().enumerate() {
             sum += *count;
 
-            if u32::from(sum) >= num_pixels / 2 {
+            if sum >= num_pixels / 2 {
                 if color_value == 0 {
                     return 1;
                 }
