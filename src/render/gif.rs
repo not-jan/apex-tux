@@ -66,20 +66,21 @@ impl Gif {
                 }
 
                 //calculating the index
-				// The u64 is just in case someone put a gif that's huge (in terms of
-				// resolution, on the x axis at least, since it's the only one that can 
-				// affect the index), if not, it will break (tested with a 1000*1000px gif)
+                // The u64 is just in case someone put a gif that's huge (in terms of
+                // resolution, on the x axis at least, since it's the only one that can
+                // affect the index), if not, it will break (tested with a 1000*1000px gif)
                 let start = ((y as u64) * width as u64 + (x as u64)) * 4;
 
                 //getting the value of the pixels
-                
-				if let Some([r, g, b, a, ..]) = pixels.get(start as usize..) {
-					let avg_pixel_value = ((u32::from(*r) + u32::from(*g) + u32::from(*b)) / 3) as usize;
 
-					//the value is multiplied by the alpha (a) of said pixel
-					//the more the pixel is transparent, the less the pixel has an importance
-					colors[avg_pixel_value] += u32::from(*a) / 255;
-				}
+                if let Some([r, g, b, a, ..]) = pixels.get(start as usize..) {
+                    let avg_pixel_value =
+                        ((u32::from(*r) + u32::from(*g) + u32::from(*b)) / 3) as usize;
+
+                    //the value is multiplied by the alpha (a) of said pixel
+                    //the more the pixel is transparent, the less the pixel has an importance
+                    colors[avg_pixel_value] += u32::from(*a) / 255;
+                }
             }
         }
 
