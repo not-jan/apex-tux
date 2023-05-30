@@ -152,7 +152,7 @@ impl Gif {
                 if mean >= median_color {
                     //which bit to turn on
                     let shift = x % 8;
-                    buf = buf + (128 >> shift);
+                    buf += 128 >> shift;
                 }
             }
             //we fortcibly push the frame to the buffer after each line
