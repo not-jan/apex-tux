@@ -72,15 +72,14 @@ impl Gif {
                 let start = ((y as u64) * width as u64 + (x as u64)) * 4;
 
                 //getting the value of the pixels
-                let pixel_r = pixels.get(start as usize).unwrap_or(&0);
-                let pixel_g = pixels.get((start + 1) as usize).unwrap_or(&0);
-                let pixel_b = pixels.get((start + 2) as usize).unwrap_or(&0);
-                let pixel_a = pixels.get((start + 3) as usize).unwrap_or(&0);
+                
+				if let Some([r, g, b, a, ..]) = pixels.get(start as usize..) {
+					let avg_pixel_value = ((u32::from(*r) + u32::from(*g) + u32::from(*b)) / 3) as usize;
 
-                //the value is multiplied by the alpha of said pixel
-                //the more the pixel is transparent, the less the pixel has an importance
-                colors[(pixel_r / 3 + pixel_g / 3 + pixel_b / 3) as usize] +=
-                    u32::from(pixel_a / 255);
+					//the value is multiplied by the alpha (a) of said pixel
+					//the more the pixel is transparent, the less the pixel has an importance
+					colors[avg_pixel_value] += u32::from(*a) / 255;
+				}
             }
         }
 
