@@ -39,8 +39,7 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
             log::error!("Failed to open GIF file '{}': {}", gif_path, err);
 			
             // Use the `new_error` function to create an error GIF
-            let error_gif = gif::Gif::new_error(Point::new(0, 0), Point::new(128, 40));
-            error_gif
+            gif::Gif::new_error(Point::new(0, 0), Point::new(128, 40))
         }
     };
 
