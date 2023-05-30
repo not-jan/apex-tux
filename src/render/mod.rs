@@ -8,3 +8,5 @@ pub mod scheduler;
 pub(crate) mod stream;
 pub(crate) mod text;
 pub(crate) mod util;
+#[cfg(feature = "gif")]
+pub(crate) mod gif;
