@@ -177,27 +177,27 @@ impl Gif {
         let mut delays = Vec::new();
         //this is to handle juste in case the file isn't a gif, or can't be parsed
         // correctly
-		if decoder_result.is_ok(){
-			let mut decoder = decoder_result.unwrap();
+        if decoder_result.is_ok() {
+            let mut decoder = decoder_result.unwrap();
 
-			// Read all the frames in the GIF
-			while let Some(frame) = decoder.read_next_frame().unwrap() {
-				decoded_frames.push(Self::read_frame(frame, gif_height, gif_width));
-				delays.push(frame.delay);
-			}
-			Self {
-				stop,
-				origin,
-				decoded_frames,
-				current_frame: AtomicUsize::new(0),
-				delays,
-				time_frame_last_update: Rc::new(RefCell::new(Instant::now())),
-			}
-		}else{
-			log::error!("The gif file can't be used, using the default placeholder.");
+            // Read all the frames in the GIF
+            while let Some(frame) = decoder.read_next_frame().unwrap() {
+                decoded_frames.push(Self::read_frame(frame, gif_height, gif_width));
+                delays.push(frame.delay);
+            }
+            Self {
+                stop,
+                origin,
+                decoded_frames,
+                current_frame: AtomicUsize::new(0),
+                delays,
+                time_frame_last_update: Rc::new(RefCell::new(Instant::now())),
+            }
+        } else {
+            log::error!("The gif file can't be used, using the default placeholder.");
 
-			Self::new_error(origin, stop)
-		}
+            Self::new_error(origin, stop)
+        }
     }
 
     pub fn new_error(origin: Point, stop: Point) -> Self {
