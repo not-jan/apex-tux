@@ -153,16 +153,13 @@ The output should look something like this:
 
 You may change sources by pressing **Alt+Shift+A** or **Alt+Shift+D** (This might not work on Wayland). The simulator uses the arrow keys.
 
-## Use as service(in background)
-
-TODO
-
 ## Development
 
 If you have a feature to add or a bug to fix please feel free to open an issue or submit a pull request.
 
 ## TODO
 
+- Run `apex-tux` in background/as a service manual.
 - Windows support
 - Test this on more than one Desktop Environment on X11
 - More providers
