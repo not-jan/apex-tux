@@ -14,7 +14,7 @@ use embedded_graphics::{
     prelude::Point,
     Drawable,
 };
-use image::{GenericImageView, AnimationDecoder, DynamicImage};
+use image::{AnimationDecoder, DynamicImage};
 
 static GIF_MISSING: &[u8] = include_bytes!("./../../assets/gif_missing.gif");
 static DISPLAY_HEIGHT: i32 = 40;
@@ -87,6 +87,7 @@ impl ImageRenderer {
     }
 
     pub fn read_image(image: &image::ImageBuffer<image::Rgba<u8>, Vec<u8>>, image_height: i32, image_width: i32) -> Vec<u8> {
+		// We first get the median "color" of the frame
         let median_color = Self::calculate_median_color_value(image, image_height, image_width);
 
         let mut frame_data = Vec::new();
@@ -146,6 +147,7 @@ impl ImageRenderer {
     }
 
 	pub fn read_dynamic_image(origin: Point, stop: Point, image: DynamicImage, buffer: &[u8]) -> Self{
+		//we first get the dimension of the image
         let image_height = stop.y - origin.y;
         let image_width = stop.x - origin.x;
 
@@ -153,7 +155,12 @@ impl ImageRenderer {
 		let mut delays = Vec::new();
 
 		if let Ok(gif) = image::codecs::gif::GifDecoder::new(&buffer[..]) {
+			//if the image is a gif
+			//NOTE we do not check for the size of each frame!
+
+			//we go through each frame
 			for frame in gif.into_frames() {
+				//TODO we do not handle if the frame isn't formatted properly!
 				if let Ok(frame) = frame {
 					delays.push(Duration::from(frame.delay()).as_millis() as u16);
 					let image = frame.into_buffer();
@@ -161,8 +168,9 @@ impl ImageRenderer {
 				}
 			}
 		} else {
+			//if the image is a still image
 			decoded_frames.push(Self::read_image(&image.into_rgba8(), image_height, image_width));
-			delays.push(0); // Add a default delay of 0 for single image rendering
+			delays.push(500); // Add a default delay of 500ms for single image rendering
 		}
 
 		Self {
@@ -196,9 +204,6 @@ impl ImageRenderer {
     }
 
     pub fn new_u8(origin: Point, stop: Point, u8_array: &[u8]) -> Self {
-        let image_height = stop.y - origin.y;
-        let image_width = stop.x - origin.x;
-
         if let Ok(image) = image::load_from_memory(u8_array) {
 			Self::read_dynamic_image(origin, stop, image, u8_array)
         } else {
@@ -210,27 +215,38 @@ impl ImageRenderer {
     pub fn draw(&self, target: &mut FrameBuffer) -> bool {
         let frame = self.current_frame.load(Ordering::Relaxed);
 
+        //get the data for the specified frame
         let frame_data = &self.decoded_frames[frame];
 
+        //convert the data to an ImageRaw
         let raw_image_frame = ImageRaw::<BinaryColor>::new(&frame_data, (self.stop.x - self.origin.x) as u32);
 
+        //draw the ImageRaw on the buffer
         let _ = Image::new(&raw_image_frame, self.origin).draw(target);
 
+        //detect if we should change the frame
         let last_display_time = self.time_frame_last_update.borrow().clone();
         let current_time = Instant::now();
         let elapsed_time = current_time - last_display_time;
 
         if elapsed_time >= Duration::from_millis(u64::from(self.delays[frame])) {
+            //the delays in the image crate isn't in increment of 10ms compared to the gif crate!
+			//before we had a *10 because of it
+
+            //update the variable only if we update the frame
             *self.time_frame_last_update.borrow_mut() = current_time;
+
+            //increment the current_frame using atomic operations
             let next_frame = frame + 1;
 
-            let has_ended = next_frame >= self.decoded_frames.len();
-            if has_ended {
+            let has_gif_ended = next_frame >= self.decoded_frames.len();
+            if has_gif_ended {
+                //reset to frame 0
                 self.current_frame.store(0, Ordering::Relaxed);
             } else {
                 self.current_frame.store(next_frame, Ordering::Relaxed);
             }
-            return has_ended;
+            return has_gif_ended;
         }
         false
     }
