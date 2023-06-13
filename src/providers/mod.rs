@@ -5,7 +5,5 @@ pub(crate) mod coindesk;
 pub(crate) mod music;
 #[cfg(feature = "sysinfo")]
 pub(crate) mod sysinfo;
-#[cfg(feature = "gif")]
-pub(crate) mod gif;
 #[cfg(feature = "image")]
 pub(crate) mod image;
