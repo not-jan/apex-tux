@@ -44,3 +44,12 @@ path = "gifs/sample_1.gif"
 # It supports any gifs (even in color, but it will only display in black and white)
 # If your gif doesn't fit in the screen, you can go to any gif resizer (like this one https://redketchup.io/gif-resizer )
 # and resize your gif to the screen resolution (128 pixels in width and 40 pixels in height)
+
+[image]
+# /!\
+# Please note that it is a relative path, so once compiled, please 
+# copy the images folder to the current directory
+path = "images/sample_1.gif"
+# This only works if the image feature is passed in the build instructions
+# It supports all those formats : https://github.com/image-rs/image/tree/8824ab3375ddab0fd3429fe3915334523d50c532#supported-image-formats
+# (even in color, but it will only display in black and white)
