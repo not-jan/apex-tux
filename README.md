@@ -57,7 +57,7 @@ $ lsusb | grep "SteelSeries Apex"
 Bus 001 Device 002: ID 1038:1610 SteelSeries ApS SteelSeries Apex Pro
 ```
 
-The **id** is the left part of the ID.
+The **id** is the right part of the ID.
 
 2. Enter the following data from [here](https://gist.github.com/ToadKing/d26f8f046a3b707e9e4b9821be5c9efc) (Shoutout [to @ToadKing](https://github.com/ToadKing)).
 
