@@ -63,8 +63,8 @@ impl ContentProvider for Image {
     fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
         let mut interval = time::interval(Duration::from_millis(10));
         //the delays in gifs are in increments of 10 ms
-		// from wikipedia (in the table, look for the byte 324)
-		// https://en.wikipedia.org/w/index.php?title=GIF&oldid=1157626024#Animated_GIF
+        // from wikipedia (in the table, look for the byte 324)
+        // https://en.wikipedia.org/w/index.php?title=GIF&oldid=1157626024#Animated_GIF
         interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
         Ok(try_stream! {
             loop {
