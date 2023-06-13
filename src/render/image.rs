@@ -39,7 +39,7 @@ impl ImageRenderer {
         // white
 
         let mut colors = (0..=255).into_iter().map(|_| 0).collect::<Vec<u32>>();
-        let num_pixels = image_width as u32 * image_height as u32;
+        let mut num_pixels_alpha = 0;
 
         let height = image.height();
         let width = image.width();
@@ -74,14 +74,19 @@ impl ImageRenderer {
                 //the value is multiplied by the alpha (a) of said pixel
                 //the more the pixel is transparent, the less the pixel has an importance
                 colors[avg_pixel_value] += u32::from(pixel[3]) / 255;
+
+				//We need the number of non-transparent pixels
+				num_pixels_alpha += u32::from(pixel[3]);
             }
         }
+		//the alpha are in the 0-255 range
+		num_pixels_alpha /= 255;
 
         let mut sum = 0;
         for (color_value, count) in colors.iter().enumerate() {
             sum += *count;
 
-            if sum >= num_pixels / 2 {
+            if sum >= num_pixels_alpha / 2 {
                 if color_value == 0 {
                     return 1;
                 }
