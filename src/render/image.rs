@@ -75,12 +75,12 @@ impl ImageRenderer {
                 //the more the pixel is transparent, the less the pixel has an importance
                 colors[avg_pixel_value] += u32::from(pixel[3]) / 255;
 
-				//We need the number of non-transparent pixels
-				num_pixels_alpha += u32::from(pixel[3]);
+                //We need the number of non-transparent pixels
+                num_pixels_alpha += u32::from(pixel[3]);
             }
         }
-		//the alpha are in the 0-255 range
-		num_pixels_alpha /= 255;
+        //the alpha are in the 0-255 range
+        num_pixels_alpha /= 255;
 
         let mut sum = 0;
         for (color_value, count) in colors.iter().enumerate() {
