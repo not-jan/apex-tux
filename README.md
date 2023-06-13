@@ -67,8 +67,8 @@ If those don't work and lead to an "Access denied" error please try the followin
 cat /etc/udev/rules.d/97-steelseries.rules
 SUBSYSTEM=="input", GROUP="input", MODE="0666"
 
-SUBSYSTEM=="usb", ATTRS{idProduct}==< PRODUCT ID HERE >, ATTRS{idProduct}=="1610", MODE="0666", GROUP="plugdev"
-KERNEL=="hidraw*", ATTRS{idProduct}==< PRODUCT ID HERE >, ATTRS{idProduct}=="1610", MODE="0666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTRS{idProduct}=="<PRODUCT ID HERE>", ATTRS{idProduct}=="1610", MODE="0666", GROUP="plugdev"
+KERNEL=="hidraw*", ATTRS{idProduct}=="<PRODUCT ID HERE >", ATTRS{idProduct}=="1610", MODE="0666", GROUP="plugdev"
 ```
 
 1. Replace the `ATTRS{idProduct}==` value with the device **id**.
