@@ -36,6 +36,7 @@ polling_interval = 1500
 # sensor_name = "asus_wmi_sensors CPU Temperature"
 
 [image]
+enabled = false
 # /!\
 # Please note that it is a relative path, so once compiled, please 
 # copy the images folder to the current directory
