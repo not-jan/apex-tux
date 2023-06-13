@@ -67,15 +67,15 @@ If those don't work and lead to an "Access denied" error please try the followin
 cat /etc/udev/rules.d/97-steelseries.rules
 SUBSYSTEM=="input", GROUP="input", MODE="0666"
 
-SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1610", MODE="0666", GROUP="plugdev"
-KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="1610", MODE="0666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTRS{idProduct}==< PRODUCT ID HERE >, ATTRS{idProduct}=="1610", MODE="0666", GROUP="plugdev"
+KERNEL=="hidraw*", ATTRS{idProduct}==< PRODUCT ID HERE >, ATTRS{idProduct}=="1610", MODE="0666", GROUP="plugdev"
 ```
 
-3. Replace the `ATTRS{idVendor}==` value with the device **id**.
+1. Replace the `ATTRS{idProduct}==` value with the device **id**.
 
-4. Save all files to `/etc/udev/rules.d/97-steelseries.rules`.
+2. Save all files to `/etc/udev/rules.d/97-steelseries.rules`.
 
-5. Finally, reload the `udev` rules: `sudo udevadm control --reload && sudo udevadm trigger`
+3. Finally, reload the `udev` rules: `sudo udevadm control --reload && sudo udevadm trigger`
 
 ### Rust
 
@@ -97,7 +97,7 @@ This repository ships with a default configuration that covers most parts and co
 You can also run the software to find errors on configuration and to decide what is the right setup you need:
 
 ```shell
-   ~/Pr/apex-tux    master !1    target/release/apex-tux                         ✔  10s  
+$ target/release/apex-tux
 23:43:05 [INFO] Registering MPRIS2 display source.
 23:43:05 [INFO] Registering Sysinfo display source.
 23:43:05 [WARN] Couldn't find network interface `eth0`
