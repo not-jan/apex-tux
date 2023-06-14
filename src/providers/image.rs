@@ -25,7 +25,7 @@ pub static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = regis
 fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     info!("Registering Image display source.");
 
-    let image_path = config.get_str("image.path").unwrap();
+    let image_path = config.get_str("image.path").unwrap_or_else(|_| String::from("images/sample_1.gif"));
     let image_file = File::open(&image_path);
 
     let image = match image_file {
