@@ -84,7 +84,7 @@ impl ImageRenderer {
 
         let mut sum = 0;
         for (color_value, count) in colors.iter().enumerate() {
-            sum += *count/255;
+            sum += *count / 255;
 
             if sum >= num_pixels_alpha / 2 {
                 if color_value == 0 {
@@ -159,27 +159,21 @@ impl ImageRenderer {
         frame_data
     }
 
-	pub fn fit_image(image: DynamicImage, size: Point) -> DynamicImage{
-		if image.height() > size.y as u32{
-			let width = image.width() * size.y as u32 / image.height();
-			let height = size.y as u32;
+    pub fn fit_image(image: DynamicImage, size: Point) -> DynamicImage {
+        if image.height() > size.y as u32 {
+            let width = image.width() * size.y as u32 / image.height();
+            let height = size.y as u32;
 
-			image.resize(
-				width, 
-				height, 
-				image::imageops::FilterType::Nearest)
-		}else if image.width() > size.x as u32{
-			let width = size.x as u32;
-			let height = image.height() * size.x as u32 / image.width();
+            image.resize(width, height, image::imageops::FilterType::Nearest)
+        } else if image.width() > size.x as u32 {
+            let width = size.x as u32;
+            let height = image.height() * size.x as u32 / image.width();
 
-			image.resize(
-				width, 
-				height, 
-				image::imageops::FilterType::Nearest)
-		}else{
-			image
-		}
-	}
+            image.resize(width, height, image::imageops::FilterType::Nearest)
+        } else {
+            image
+        }
+    }
 
     pub fn read_dynamic_image(
         origin: Point,
@@ -197,21 +191,30 @@ impl ImageRenderer {
         if let Ok(gif) = image::codecs::gif::GifDecoder::new(&buffer[..]) {
             //if the image is a gif
             //NOTE we do not check for the size of each frame!
-			//We can avoid doing so since we have the Self::fit_image which will resize the frames correctly.
+            //We can avoid doing so since we have the Self::fit_image which will resize the
+            // frames correctly.
 
             //we go through each frame
             for frame in gif.into_frames() {
                 //TODO we do not handle if the frame isn't formatted properly!
                 if let Ok(frame) = frame {
-					//TODO some gifs do not have delays embedded, we should use a 100 ms in that case
+                    //TODO some gifs do not have delays embedded, we should use a 100 ms in that
+                    // case
                     delays.push(Duration::from(frame.delay()).as_millis() as u16);
-					let resized = Self::fit_image(DynamicImage::ImageRgba8(frame.into_buffer()), Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
-                    
-                    decoded_frames.push(Self::read_image(&resized.into_rgba8(), image_height, image_width));
+                    let resized = Self::fit_image(
+                        DynamicImage::ImageRgba8(frame.into_buffer()),
+                        Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT),
+                    );
+
+                    decoded_frames.push(Self::read_image(
+                        &resized.into_rgba8(),
+                        image_height,
+                        image_width,
+                    ));
                 }
             }
         } else {
-			let resized = Self::fit_image(image, Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
+            let resized = Self::fit_image(image, Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
             //if the image is a still image
             decoded_frames.push(Self::read_image(
                 &resized.into_rgba8(),
