@@ -197,11 +197,13 @@ impl ImageRenderer {
         if let Ok(gif) = image::codecs::gif::GifDecoder::new(&buffer[..]) {
             //if the image is a gif
             //NOTE we do not check for the size of each frame!
+			//We can avoid doing so since we have the Self::fit_image which will resize the frames correctly.
 
             //we go through each frame
             for frame in gif.into_frames() {
                 //TODO we do not handle if the frame isn't formatted properly!
                 if let Ok(frame) = frame {
+					//TODO some gifs do not have delays embedded, we should use a 100 ms in that case
                     delays.push(Duration::from(frame.delay()).as_millis() as u16);
 					let resized = Self::fit_image(DynamicImage::ImageRgba8(frame.into_buffer()), Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
                     
