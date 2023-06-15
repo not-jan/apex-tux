@@ -159,6 +159,28 @@ impl ImageRenderer {
         frame_data
     }
 
+	pub fn fit_image(image: DynamicImage, size: Point) -> DynamicImage{
+		if image.height() > size.y as u32{
+			let width = image.width() * size.y as u32 / image.height();
+			let height = size.y as u32;
+
+			image.resize(
+				width, 
+				height, 
+				image::imageops::FilterType::Nearest)
+		}else if image.width() > size.x as u32{
+			let width = size.x as u32;
+			let height = image.height() * size.x as u32 / image.width();
+
+			image.resize(
+				width, 
+				height, 
+				image::imageops::FilterType::Nearest)
+		}else{
+			image
+		}
+	}
+
     pub fn read_dynamic_image(
         origin: Point,
         stop: Point,
@@ -181,14 +203,16 @@ impl ImageRenderer {
                 //TODO we do not handle if the frame isn't formatted properly!
                 if let Ok(frame) = frame {
                     delays.push(Duration::from(frame.delay()).as_millis() as u16);
-                    let image = frame.into_buffer();
-                    decoded_frames.push(Self::read_image(&image, image_height, image_width));
+					let resized = Self::fit_image(DynamicImage::ImageRgba8(frame.into_buffer()), Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
+                    
+                    decoded_frames.push(Self::read_image(&resized.into_rgba8(), image_height, image_width));
                 }
             }
         } else {
+			let resized = Self::fit_image(image, Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
             //if the image is a still image
             decoded_frames.push(Self::read_image(
-                &image.into_rgba8(),
+                &resized.into_rgba8(),
                 image_height,
                 image_width,
             ));
