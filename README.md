@@ -46,7 +46,7 @@ Other devices may be compatible and all that is needed is to add the ID to apex-
 
 ## Installation
 
-For installing this software, follow the steps:
+For installing this software, follow these steps:
 
 ### UDev
 
@@ -83,10 +83,10 @@ KERNEL=="hidraw*", ATTRS{idProduct}=="<PRODUCT ID HERE >", ATTRS{idProduct}=="16
 - Install required dependencies
   - For Ubuntu: `sudo apt install libssl-dev dbus-dev libusb-1.0-0-dev`
 - Clone the repository: `git clone git@github.com:not-jan/apex-tux.git`
-- Change directory into the repository: `cd apex-tux`
+- Change the directory into the repository: `cd apex-tux`
 - Compile the app using the features you want
   - If you **don't** run DBus you have to disable the dbus feature: `cargo build --release --no-default-features --features crypto,usb`
-  - Otherwise just run `cargo build --release --features sysinfo,hotkeys,gif`
+  - Otherwise, just run `cargo build --release --features sysinfo,hotkeys,gif`
   - If you **don't** have an Apex device around at the moment or want to develop more easily you can enable the simulator: `cargo build --release --no-default-features --features crypto,clock,dbus-support,simulator`
 
 ## Configuration
@@ -159,7 +159,7 @@ If you have a feature to add or a bug to fix please feel free to open an issue o
 
 ## TODO
 
-- Run `apex-tux` in background/as a service manual.
+- Run `apex-tux` in the background/as a service manual.
 - Windows support
 - Test this on more than one Desktop Environment on X11
 - More providers
@@ -171,7 +171,7 @@ If you have a feature to add or a bug to fix please feel free to open an issue o
 - Add support for more notifications
 - Package this up for Debian/Arch/Flatpak etc.
 
-## Windows support ETA wen?
+## Windows support ETA, when?
 
 I've written a stub for SteelSeries Engine support on Windows, there is an [API for mediaplayer metadata](https://microsoft.github.io/windows-docs-rs/doc/windows/Media/Control/struct.GlobalSystemMediaTransportControlsSessionManager.html) but my time is kind of limited and I don't run Windows all that often.
 It will happen eventually but it's not a priority.
