@@ -1,5 +1,5 @@
 use crate::{
-    render::{display::ContentProvider, gif, scheduler::ContentWrapper},
+    render::{display::ContentProvider, image, scheduler::ContentWrapper},
     scheduler::CONTENT_PROVIDERS,
 };
 use anyhow::Result;
@@ -23,39 +23,39 @@ pub static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = regis
 #[doc(hidden)]
 #[allow(clippy::unnecessary_wraps)]
 fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
-    info!("Registering Gif display source.");
+    info!("Registering Image display source.");
 
-    let gif_path = config.get_str("gif.path").unwrap();
-    let gif_file = File::open(&gif_path);
+    let image_path = config.get_str("image.path").unwrap_or_else(|_| String::from("images/sample_1.gif"));
+    let image_file = File::open(&image_path);
 
-    let gif = match gif_file {
-        Ok(file) => gif::Gif::new(Point::new(0, 0), Point::new(128, 40), file),
+    let image = match image_file {
+        Ok(file) => image::ImageRenderer::new(Point::new(0, 0), Point::new(128, 40), file),
         Err(err) => {
-            log::error!("Failed to open GIF file '{}': {}", gif_path, err);
+            log::error!("Failed to open the image '{}': {}", image_path, err);
 
             // Use the `new_error` function to create an error GIF
-            gif::Gif::new_error(Point::new(0, 0), Point::new(128, 40))
+            image::ImageRenderer::new_error(Point::new(0, 0), Point::new(128, 40))
         }
     };
 
-    Ok(Box::new(Gif { gif }))
+    Ok(Box::new(Image { image }))
 }
 
-pub struct Gif {
-    gif: gif::Gif,
+pub struct Image {
+    image: image::ImageRenderer,
 }
 
-impl Gif {
+impl Image {
     pub fn render(&self) -> Result<FrameBuffer> {
         let mut buffer = FrameBuffer::new();
 
-        self.gif.draw(&mut buffer);
+        self.image.draw(&mut buffer);
 
         Ok(buffer)
     }
 }
 
-impl ContentProvider for Gif {
+impl ContentProvider for Image {
     type ContentStream<'a> = impl Stream<Item = Result<FrameBuffer>> + 'a;
 
     // This needs to be enabled until full GAT support is here
@@ -63,7 +63,8 @@ impl ContentProvider for Gif {
     fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
         let mut interval = time::interval(Duration::from_millis(10));
         //the delays in gifs are in increments of 10 ms
-        //https://docs.rs/gif/latest/gif/struct.Frame.html#structfield.delay
+        // from wikipedia (in the table, look for the byte 324)
+        // https://en.wikipedia.org/w/index.php?title=GIF&oldid=1157626024#Animated_GIF
         interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
         Ok(try_stream! {
             loop {
@@ -76,6 +77,6 @@ impl ContentProvider for Gif {
     }
 
     fn name(&self) -> &'static str {
-        "gif"
+        "image"
     }
 }
