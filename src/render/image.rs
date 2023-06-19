@@ -14,7 +14,7 @@ use embedded_graphics::{
     prelude::Point,
     Drawable,
 };
-use image::{AnimationDecoder, DynamicImage};
+use image::{AnimationDecoder, DynamicImage, GenericImageView};
 
 static GIF_MISSING: &[u8] = include_bytes!("./../../assets/gif_missing.gif");
 static DISPLAY_HEIGHT: i32 = 40;
@@ -171,6 +171,34 @@ impl ImageRenderer {
         }
     }
 
+    pub fn center_image(image: DynamicImage, size: Point) -> DynamicImage {
+        let new_x = (size.x as u32 - image.width()) / 2;
+        let new_y = (size.y as u32 - image.height()) / 2;
+
+        Self::move_image(image, Point::new(new_x as i32, new_y as i32), size)
+    }
+
+    pub fn move_image(image: DynamicImage, offset: Point, size: Point) -> DynamicImage {
+        let mut buffer = image::RgbaImage::new(size.x as u32, size.y as u32);
+
+        for x in 0..image.width() {
+            let true_x = x as i32 + offset.x;
+            if true_x < 0 {
+                continue;
+            }
+            for y in 0..image.height() {
+                let true_y = y as i32 + offset.y;
+                if true_y < 0 {
+                    continue;
+                }
+
+                buffer.put_pixel(true_x as u32, true_y as u32, image.get_pixel(x, y));
+            }
+        }
+
+        DynamicImage::from(buffer)
+    }
+
     pub fn read_dynamic_image(
         origin: Point,
         stop: Point,
@@ -201,9 +229,11 @@ impl ImageRenderer {
                         DynamicImage::ImageRgba8(frame.into_buffer()),
                         Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT),
                     );
+                    let centered =
+                        Self::center_image(resized, Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
 
                     decoded_frames.push(Self::read_image(
-                        &resized.into_rgba8(),
+                        &centered.into_rgba8(),
                         image_height,
                         image_width,
                     ));
@@ -211,9 +241,10 @@ impl ImageRenderer {
             }
         } else {
             let resized = Self::fit_image(image, Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
+            let centered = Self::center_image(resized, Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
             //if the image is a still image
             decoded_frames.push(Self::read_image(
-                &resized.into_rgba8(),
+                &centered.into_rgba8(),
                 image_height,
                 image_width,
             ));
