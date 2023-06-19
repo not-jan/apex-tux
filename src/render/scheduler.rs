@@ -151,8 +151,8 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
         //the interval to check wether to change the screen or not
         let mut change = time::interval(
             Duration::from_secs(
-                if !is_auto_change_enabled {
-                    30
+                if !is_auto_change_enabled { // this is done for performance (don't know if it actually has a big impact)
+                    300 
                 }else{
                     1
                 }
