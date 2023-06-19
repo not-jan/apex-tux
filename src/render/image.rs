@@ -221,7 +221,7 @@ impl ImageRenderer {
                 image_height,
                 image_width,
             ));
-            delays.push(500); // Add a default delay of 500ms for single image
+            delays.push(1500); // Add a default delay of 500ms for single image
                               // rendering
         }
 
