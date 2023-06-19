@@ -10,7 +10,11 @@ use embedded_graphics::geometry::Point;
 use futures::Stream;
 use linkme::distributed_slice;
 use log::info;
-use std::{fs::{File, self}, sync::atomic::{AtomicUsize, Ordering}, path::Path};
+use std::{
+    fs::{self, File},
+    path::Path,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 use tokio::{
     time,
     time::{Duration, MissedTickBehavior},
@@ -25,20 +29,25 @@ pub static PROVIDER_INIT: fn(&Config) -> Result<Box<dyn ContentWrapper>> = regis
 fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     info!("Registering Image display source.");
 
-    let image_path = config.get_str("image.path").unwrap_or_else(|_| String::from("images/sample_1.gif"));
+    let image_path = config
+        .get_str("image.path")
+        .unwrap_or_else(|_| String::from("images/sample_1.gif"));
     let mut images = Vec::new();
 
-    if Path::new(&image_path).is_dir(){
-
-        for file in fs::read_dir(image_path).unwrap(){
-            let file_path = file.unwrap().path();    
+    if Path::new(&image_path).is_dir() {
+        for file in fs::read_dir(image_path).unwrap() {
+            let file_path = file.unwrap().path();
             let image_file = File::open(file_path.clone());
 
             let image = match image_file {
                 Ok(file) => image::ImageRenderer::new(Point::new(0, 0), Point::new(128, 40), file),
                 Err(err) => {
-                    log::error!("Failed to open the image '{}': {}", file_path.display(), err);
-        
+                    log::error!(
+                        "Failed to open the image '{}': {}",
+                        file_path.display(),
+                        err
+                    );
+
                     // Use the `new_error` function to create an error GIF
                     image::ImageRenderer::new_error(Point::new(0, 0), Point::new(128, 40))
                 }
@@ -46,14 +55,13 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
             images.push(image);
         }
     } else {
-
         let image_file = File::open(&image_path);
 
         let image = match image_file {
             Ok(file) => image::ImageRenderer::new(Point::new(0, 0), Point::new(128, 40), file),
             Err(err) => {
                 log::error!("Failed to open the image '{}': {}", image_path, err);
-    
+
                 // Use the `new_error` function to create an error GIF
                 image::ImageRenderer::new_error(Point::new(0, 0), Point::new(128, 40))
             }
@@ -61,12 +69,10 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
         images.push(image);
     }
 
-    Ok(Box::new(Images 
-        { 
-            images,
-            current_image: AtomicUsize::new(0), 
-        }
-    ))
+    Ok(Box::new(Images {
+        images,
+        current_image: AtomicUsize::new(0),
+    }))
 }
 
 pub struct Images {
@@ -94,7 +100,7 @@ impl Images {
             } else {
                 next_image = next_image;
             }
-            
+
             self.current_image.store(next_image, Ordering::Relaxed);
             let next = &self.images[next_image];
             next.set_display_time();
