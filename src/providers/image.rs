@@ -10,7 +10,7 @@ use embedded_graphics::geometry::Point;
 use futures::Stream;
 use linkme::distributed_slice;
 use log::info;
-use std::fs::File;
+use std::{fs::{File, self}, sync::atomic::{AtomicUsize, Ordering}, path::Path};
 use tokio::{
     time,
     time::{Duration, MissedTickBehavior},
@@ -26,36 +26,83 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
     info!("Registering Image display source.");
 
     let image_path = config.get_str("image.path").unwrap_or_else(|_| String::from("images/sample_1.gif"));
-    let image_file = File::open(&image_path);
+    let mut images = Vec::new();
 
-    let image = match image_file {
-        Ok(file) => image::ImageRenderer::new(Point::new(0, 0), Point::new(128, 40), file),
-        Err(err) => {
-            log::error!("Failed to open the image '{}': {}", image_path, err);
+    if Path::new(&image_path).is_dir(){
 
-            // Use the `new_error` function to create an error GIF
-            image::ImageRenderer::new_error(Point::new(0, 0), Point::new(128, 40))
+        for file in fs::read_dir(image_path).unwrap(){
+            let file_path = file.unwrap().path();    
+            let image_file = File::open(file_path.clone());
+
+            let image = match image_file {
+                Ok(file) => image::ImageRenderer::new(Point::new(0, 0), Point::new(128, 40), file),
+                Err(err) => {
+                    log::error!("Failed to open the image '{}': {}", file_path.display(), err);
+        
+                    // Use the `new_error` function to create an error GIF
+                    image::ImageRenderer::new_error(Point::new(0, 0), Point::new(128, 40))
+                }
+            };
+            images.push(image);
         }
-    };
+    } else {
 
-    Ok(Box::new(Image { image }))
+        let image_file = File::open(&image_path);
+
+        let image = match image_file {
+            Ok(file) => image::ImageRenderer::new(Point::new(0, 0), Point::new(128, 40), file),
+            Err(err) => {
+                log::error!("Failed to open the image '{}': {}", image_path, err);
+    
+                // Use the `new_error` function to create an error GIF
+                image::ImageRenderer::new_error(Point::new(0, 0), Point::new(128, 40))
+            }
+        };
+        images.push(image);
+    }
+
+    Ok(Box::new(Images 
+        { 
+            images,
+            current_image: AtomicUsize::new(0), 
+        }
+    ))
 }
 
-pub struct Image {
-    image: image::ImageRenderer,
+pub struct Images {
+    images: Vec<image::ImageRenderer>,
+    current_image: AtomicUsize,
 }
 
-impl Image {
+impl Images {
     pub fn render(&self) -> Result<FrameBuffer> {
         let mut buffer = FrameBuffer::new();
 
-        self.image.draw(&mut buffer);
+        let image = self.current_image.load(Ordering::Relaxed);
+        //get the data for the specified frame
+        let image_data = &self.images[image];
+        //draw and detect if the gif/image has ended
+        let has_ended = image_data.draw(&mut buffer);
+
+        if has_ended {
+            let mut next_image = image + 1;
+            let has_no_next_image = next_image >= self.images.len();
+
+            if has_no_next_image {
+                //reset to frame 0
+                next_image = 0;
+            } else {
+                next_image = next_image;
+            }
+            
+            self.current_image.store(next_image, Ordering::Relaxed);
+        }
 
         Ok(buffer)
     }
 }
 
-impl ContentProvider for Image {
+impl ContentProvider for Images {
     type ContentStream<'a> = impl Stream<Item = Result<FrameBuffer>> + 'a;
 
     // This needs to be enabled until full GAT support is here
