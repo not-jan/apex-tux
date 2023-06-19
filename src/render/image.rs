@@ -160,16 +160,12 @@ impl ImageRenderer {
     }
 
     pub fn fit_image(image: DynamicImage, size: Point) -> DynamicImage {
-        if image.height() > size.y as u32 {
-            let width = image.width() * size.y as u32 / image.height();
-            let height = size.y as u32;
-
-            image.resize(width, height, image::imageops::FilterType::Nearest)
-        } else if image.width() > size.x as u32 {
-            let width = size.x as u32;
-            let height = image.height() * size.x as u32 / image.width();
-
-            image.resize(width, height, image::imageops::FilterType::Nearest)
+        if image.height() > size.y as u32 || image.width() > size.x as u32 {
+            image.resize(
+                size.x as u32,
+                size.y as u32,
+                image::imageops::FilterType::Nearest,
+            )
         } else {
             image
         }
