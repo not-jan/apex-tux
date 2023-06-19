@@ -96,6 +96,8 @@ impl Images {
             }
             
             self.current_image.store(next_image, Ordering::Relaxed);
+            let next = &self.images[next_image];
+            next.set_display_time();
         }
 
         Ok(buffer)

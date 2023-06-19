@@ -302,4 +302,7 @@ impl ImageRenderer {
         }
         false
     }
+    pub fn set_display_time(&self){
+        *self.time_frame_last_update.borrow_mut() = Instant::now();
+    }
 }
