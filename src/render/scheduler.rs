@@ -1,5 +1,10 @@
 use anyhow::{anyhow, Result};
-use std::{marker::PhantomData, time::{Duration, Instant}, cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    marker::PhantomData,
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
 use crate::render::{
     display::ContentProvider,
@@ -17,7 +22,10 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
-use tokio::{sync::broadcast, time::{MissedTickBehavior, self}};
+use tokio::{
+    sync::broadcast,
+    time::{self, MissedTickBehavior},
+};
 
 pub const TICK_LENGTH: usize = 50;
 pub const TICKS_PER_SECOND: usize = 1000 / TICK_LENGTH;
@@ -143,24 +151,21 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
         let z = current.clone();
 
         let mut y = multiplex(providers, move || z.load(Ordering::SeqCst));
-        
+
         //get the interval
         let interval_bewteen_change = config.get_int("interval.refresh").unwrap_or(30);
         //flag to know if auto changer is enabled
         let is_auto_change_enabled = interval_between_change != 0;
         //the interval to check wether to change the screen or not
-        let mut change = time::interval(
-            Duration::from_secs(
-                if !is_auto_change_enabled { // this is done for performance (don't know if it actually has a big impact)
-                    300 
-                }else{
-                    1
-                }
-            )
-        );
+        let mut change = time::interval(Duration::from_secs(if !is_auto_change_enabled {
+            // this is done for performance (don't know if it actually has a big impact)
+            300
+        } else {
+            1
+        }));
         change.set_missed_tick_behavior(MissedTickBehavior::Skip);
         //the last time the screen was changed
-        let time_last_change = Rc::new(RefCell::new(Instant::now())) ;
+        let time_last_change = Rc::new(RefCell::new(Instant::now()));
         loop {
             tokio::select! {
                 cmd = rx.recv() => {
