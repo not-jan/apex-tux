@@ -249,7 +249,7 @@ impl ImageRenderer {
                 image_width,
             ));
             delays.push(1500); // Add a default delay of 500ms for single image
-                              // rendering
+                               // rendering
         }
 
         Self {
@@ -291,6 +291,8 @@ impl ImageRenderer {
     }
 
     pub fn draw(&self, target: &mut FrameBuffer) -> bool {
+        //TODO This runs every 10ms, this doesn't need to run that fast everytime when
+        // rendering still images (so maybe we can avoid rendering each time)
         let frame = self.current_frame.load(Ordering::Relaxed);
 
         //get the data for the specified frame
@@ -329,7 +331,8 @@ impl ImageRenderer {
         }
         false
     }
-    pub fn set_display_time(&self){
+
+    pub fn set_display_time(&self) {
         *self.time_frame_last_update.borrow_mut() = Instant::now();
     }
 }
