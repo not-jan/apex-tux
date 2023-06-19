@@ -74,6 +74,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
 
     pub async fn start(
         &mut self,
+        tx: broadcast::Sender<Command>,
         rx: broadcast::Receiver<Command>,
         mut config: Config,
     ) -> Result<()> {
