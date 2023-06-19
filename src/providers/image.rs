@@ -90,7 +90,7 @@ impl Images {
         //draw and detect if the gif/image has ended
         let has_ended = image_data.draw(&mut buffer);
 
-        if has_ended {
+        if has_ended && !self.images.len() == 1 {
             let mut next_image = image + 1;
             let has_no_next_image = next_image >= self.images.len();
 
