@@ -67,8 +67,8 @@ If those don't work and lead to an "Access denied" error please try the followin
 cat /etc/udev/rules.d/97-steelseries.rules
 SUBSYSTEM=="input", GROUP="input", MODE="0666"
 
-SUBSYSTEM=="usb", ATTRS{idProduct}=="<PRODUCT ID HERE>", ATTRS{idProduct}=="1610", MODE="0666", GROUP="plugdev"
-KERNEL=="hidraw*", ATTRS{idProduct}=="<PRODUCT ID HERE >", ATTRS{idProduct}=="1610", MODE="0666", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="<PRODUCT ID HERE>", MODE="0666", GROUP="plugdev"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="<PRODUCT ID HERE>", MODE="0666", GROUP="plugdev"
 ```
 
 1. Replace the `ATTRS{idProduct}==` value with the device **id**.
@@ -86,7 +86,7 @@ KERNEL=="hidraw*", ATTRS{idProduct}=="<PRODUCT ID HERE >", ATTRS{idProduct}=="16
 - Change the directory into the repository: `cd apex-tux`
 - Compile the app using the features you want
   - If you **don't** run DBus you have to disable the dbus feature: `cargo build --release --no-default-features --features crypto,usb`
-  - Otherwise, just run `cargo build --release --features sysinfo,hotkeys,gif`
+  - Otherwise just run `cargo build --release --features sysinfo,hotkeys,image`
   - If you **don't** have an Apex device around at the moment or want to develop more easily you can enable the simulator: `cargo build --release --no-default-features --features crypto,clock,dbus-support,simulator`
 
 ## Configuration
@@ -136,8 +136,6 @@ Simply run the binary under `target/release/apex-tux` and make sure the settings
 The output should look something like this:
 
 ```shell
-23:18:14 [INFO] register hotkey ALT+SHIFT+A
-23:18:14 [INFO] register hotkey ALT+SHIFT+D
 23:18:14 [INFO] Registering Coindesk display source.
 23:18:14 [INFO] Registering Clock display source.
 23:18:14 [INFO] Registering MPRIS2 display source.
@@ -159,7 +157,7 @@ If you have a feature to add or a bug to fix please feel free to open an issue o
 
 ## TODO
 
-- Run `apex-tux` in the background/as a service manual.
+- Run `apex-tux` in the background/as a service manually.
 - Windows support
 - Test this on more than one Desktop Environment on X11
 - More providers
