@@ -44,3 +44,4 @@ path = "images/sample_1.gif"
 # This only works if the image feature is passed in the build instructions
 # It supports all those formats : https://github.com/image-rs/image/tree/8824ab3375ddab0fd3429fe3915334523d50c532#supported-image-formats
 # (even in color, but it will only display in black and white)
+# (Hint: you can also put a folder, it will cycle through every __file__ in that folder)
