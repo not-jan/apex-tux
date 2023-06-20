@@ -128,7 +128,10 @@ $ target/release/apex-tux
 23:43:05 [INFO] Connected to music player: "org.mpris.MediaPlayer2.spotify"
 ```
 
-In our case we need to choose a right value for the sensor(`acpitz temp1`, critical temperatured one, i.e., cpu) and the network interface(`wlp3s0`, wifi).
+In our case we need to set a right value for the sensor(`acpitz temp1`, critical temperatured one, i.e., cpu) and the network interface(`wlp3s0`, wifi) in the `[sysinfo]` section.
+
+You can set your default media player on the `[mpris2]` section.
+
 
 ## Usage
 
