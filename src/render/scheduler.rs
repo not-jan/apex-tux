@@ -153,7 +153,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
         let mut y = multiplex(providers, move || z.load(Ordering::SeqCst));
 
         //get the interval
-        let interval_bewteen_change = config.get_int("interval.refresh").unwrap_or(30);
+        let interval_between_change = config.get_int("interval.refresh").unwrap_or(30);
         //flag to know if auto changer is enabled
         let is_auto_change_enabled = interval_between_change != 0;
         //the interval to check wether to change the screen or not
@@ -208,7 +208,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
                         let current_time = Instant::now();
                         let elapsed_time = current_time - time_last_change.borrow().clone();
                         //if the last update is over 30seconds
-                        if elapsed_time > Duration::from_secs(interval_bewteen_change as u64) {
+                        if elapsed_time > Duration::from_secs(interval_between_change as u64) {
                             //change the screen
                             let _ = tx.send(Command::NextSource);
                         }
