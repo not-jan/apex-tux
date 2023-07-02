@@ -222,9 +222,14 @@ impl ImageRenderer {
             for frame in gif.into_frames() {
                 //TODO we do not handle if the frame isn't formatted properly!
                 if let Ok(frame) = frame {
-                    //TODO some gifs do not have delays embedded, we should use a 100 ms in that
-                    // case
-                    delays.push(Duration::from(frame.delay()).as_millis() as u16);
+                    //get the delay between this frame and the next
+                    let mut delay = Duration::from(frame.delay()).as_millis() as u16;
+                    //if no delay is set, default to 16 (to get ~60 fps)
+                    if delay == 0 {
+                        delay = 16;
+                    }
+
+                    delays.push(delay);
                     let resized = Self::fit_image(
                         DynamicImage::ImageRgba8(frame.into_buffer()),
                         Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT),
