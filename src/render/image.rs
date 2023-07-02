@@ -214,9 +214,9 @@ impl ImageRenderer {
 
         if let Ok(gif) = image::codecs::gif::GifDecoder::new(&buffer[..]) {
             //if the image is a gif
-            //NOTE we do not check for the size of each frame!
-            //We can avoid doing so since we have the Self::fit_image which will resize the
-            // frames correctly.
+
+            // We do not need to check for the size of each frame since we have the
+            // Self::fit_image which will resize the frames correctly.
 
             //we go through each frame
             for frame in gif.into_frames() {
