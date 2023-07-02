@@ -32,7 +32,7 @@ impl MetadataTrait for Metadata {
         Ok(self.artists.clone())
     }
 
-    fn length(&self) -> Result<i64> {
+    fn length(&self) -> Result<u64> {
         Ok(0)
     }
 }
