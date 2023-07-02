@@ -207,7 +207,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
                         //get the time since the last update
                         let current_time = Instant::now();
                         let elapsed_time = current_time - time_last_change.borrow().clone();
-                        //if the last update is over 30seconds
+                        //if the last update is over the choosen interval
                         if elapsed_time > Duration::from_secs(interval_between_change as u64) {
                             //change the screen
                             let _ = tx.send(Command::NextSource);
