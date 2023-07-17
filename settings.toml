@@ -1,3 +1,8 @@
+[interval]
+# The interval at which the screen should automatically change
+# set to 0 if you don't want it to change automatically
+refresh=45
+
 [clock]
 enabled = true
 # Set this to the highest priority so it will start with the clock

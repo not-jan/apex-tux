@@ -1,5 +1,10 @@
 use anyhow::{anyhow, Result};
-use std::marker::PhantomData;
+use std::{
+    cell::RefCell,
+    marker::PhantomData,
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
 use crate::render::{
     display::ContentProvider,
@@ -17,7 +22,10 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
-use tokio::sync::broadcast;
+use tokio::{
+    sync::broadcast,
+    time::{self, MissedTickBehavior},
+};
 
 pub const TICK_LENGTH: usize = 50;
 pub const TICKS_PER_SECOND: usize = 1000 / TICK_LENGTH;
@@ -74,6 +82,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
 
     pub async fn start(
         &mut self,
+        tx: broadcast::Sender<Command>,
         rx: broadcast::Receiver<Command>,
         mut config: Config,
     ) -> Result<()> {
@@ -142,9 +151,26 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
         let z = current.clone();
 
         let mut y = multiplex(providers, move || z.load(Ordering::SeqCst));
+
+        //get the interval
+        let interval_between_change = config.get_int("interval.refresh").unwrap_or(30);
+        //flag to know if auto changer is enabled
+        let is_auto_change_enabled = interval_between_change != 0;
+        //the interval to check wether to change the screen or not
+        let mut change = time::interval(Duration::from_secs(if !is_auto_change_enabled {
+            // this is done for performance (don't know if it actually has a big impact)
+            300
+        } else {
+            1
+        }));
+        change.set_missed_tick_behavior(MissedTickBehavior::Skip);
+        //the last time the screen was changed
+        let time_last_change = Rc::new(RefCell::new(Instant::now()));
         loop {
             tokio::select! {
                 cmd = rx.recv() => {
+                    //update the last time the screen was updated to now
+                    *time_last_change.borrow_mut() = Instant::now();
                     match cmd {
                         Ok(Command::Shutdown) => break,
                         Ok(Command::NextSource) => {
@@ -174,6 +200,18 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
                 content = y.next() => {
                     if let Some(Ok(content)) = &content {
                         self.device.draw(content).await?;
+                    }
+                }
+                _ = change.tick() => {
+                    if is_auto_change_enabled {
+                        //get the time since the last update
+                        let current_time = Instant::now();
+                        let elapsed_time = current_time - time_last_change.borrow().clone();
+                        //if the last update is over the choosen interval
+                        if elapsed_time > Duration::from_secs(interval_between_change as u64) {
+                            //change the screen
+                            let _ = tx.send(Command::NextSource);
+                        }
                     }
                 }
             };
