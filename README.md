@@ -154,13 +154,27 @@ The output should look something like this:
 
 You may change sources by pressing **Alt+Shift+A** or **Alt+Shift+D** (This might not work on Wayland). The simulator uses the arrow keys.
 
+## Autostarting
+
+To start on boot the binary must be started under an interactive daemon, i.e. by your Desktop Environment. A systemd service will fail unless compiled without hotkey support. Most DEs support the following method/path but you may have to find your equivalent.
+
+-Create `apex-tux.desktop` in `~/.config/autostart`  
+-Edit `apex-tux.desktop` to contain:
+```shell
+[Desktop Entry]
+Exec=/path/to/apex-tux/apex-tux
+Name=apex-tux
+Path=/path/to/apex-tux
+Terminal=true
+Type=Application
+```
+
 ## Development
 
 If you have a feature to add or a bug to fix please feel free to open an issue or submit a pull request.
 
 ## TODO
 
-- Run `apex-tux` in the background/as a service manually.
 - Windows support
 - Test this on more than one Desktop Environment on X11
 - More providers
