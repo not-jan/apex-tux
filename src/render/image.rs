@@ -14,7 +14,7 @@ use embedded_graphics::{
     prelude::Point,
     Drawable,
 };
-use image::{AnimationDecoder, DynamicImage};
+use image::{AnimationDecoder, DynamicImage, GenericImageView};
 
 static GIF_MISSING: &[u8] = include_bytes!("./../../assets/gif_missing.gif");
 static DISPLAY_HEIGHT: i32 = 40;
@@ -160,19 +160,43 @@ impl ImageRenderer {
     }
 
     pub fn fit_image(image: DynamicImage, size: Point) -> DynamicImage {
-        if image.height() > size.y as u32 {
-            let width = image.width() * size.y as u32 / image.height();
-            let height = size.y as u32;
-
-            image.resize(width, height, image::imageops::FilterType::Nearest)
-        } else if image.width() > size.x as u32 {
-            let width = size.x as u32;
-            let height = image.height() * size.x as u32 / image.width();
-
-            image.resize(width, height, image::imageops::FilterType::Nearest)
+        if image.height() > size.y as u32 || image.width() > size.x as u32 {
+            image.resize(
+                size.x as u32,
+                size.y as u32,
+                image::imageops::FilterType::Nearest,
+            )
         } else {
             image
         }
+    }
+
+    pub fn center_image(image: DynamicImage, size: Point) -> DynamicImage {
+        let new_x = (size.x as u32 - image.width()) / 2;
+        let new_y = (size.y as u32 - image.height()) / 2;
+
+        Self::move_image(image, Point::new(new_x as i32, new_y as i32), size)
+    }
+
+    pub fn move_image(image: DynamicImage, offset: Point, size: Point) -> DynamicImage {
+        let mut buffer = image::RgbaImage::new(size.x as u32, size.y as u32);
+
+        for x in 0..image.width() {
+            let true_x = x as i32 + offset.x;
+            if true_x < 0 {
+                continue;
+            }
+            for y in 0..image.height() {
+                let true_y = y as i32 + offset.y;
+                if true_y < 0 {
+                    continue;
+                }
+
+                buffer.put_pixel(true_x as u32, true_y as u32, image.get_pixel(x, y));
+            }
+        }
+
+        DynamicImage::from(buffer)
     }
 
     pub fn read_dynamic_image(
@@ -190,24 +214,31 @@ impl ImageRenderer {
 
         if let Ok(gif) = image::codecs::gif::GifDecoder::new(&buffer[..]) {
             //if the image is a gif
-            //NOTE we do not check for the size of each frame!
-            //We can avoid doing so since we have the Self::fit_image which will resize the
-            // frames correctly.
+
+            // We do not need to check for the size of each frame since we have the
+            // Self::fit_image which will resize the frames correctly.
 
             //we go through each frame
             for frame in gif.into_frames() {
                 //TODO we do not handle if the frame isn't formatted properly!
                 if let Ok(frame) = frame {
-                    //TODO some gifs do not have delays embedded, we should use a 100 ms in that
-                    // case
-                    delays.push(Duration::from(frame.delay()).as_millis() as u16);
+                    //get the delay between this frame and the next
+                    let mut delay = Duration::from(frame.delay()).as_millis() as u16;
+                    //if no delay is set, default to 16 (to get ~60 fps)
+                    if delay == 0 {
+                        delay = 16;
+                    }
+
+                    delays.push(delay);
                     let resized = Self::fit_image(
                         DynamicImage::ImageRgba8(frame.into_buffer()),
                         Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT),
                     );
+                    let centered =
+                        Self::center_image(resized, Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
 
                     decoded_frames.push(Self::read_image(
-                        &resized.into_rgba8(),
+                        &centered.into_rgba8(),
                         image_height,
                         image_width,
                     ));
@@ -215,14 +246,15 @@ impl ImageRenderer {
             }
         } else {
             let resized = Self::fit_image(image, Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
+            let centered = Self::center_image(resized, Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT));
             //if the image is a still image
             decoded_frames.push(Self::read_image(
-                &resized.into_rgba8(),
+                &centered.into_rgba8(),
                 image_height,
                 image_width,
             ));
-            delays.push(500); // Add a default delay of 500ms for single image
-                              // rendering
+            delays.push(1500); // Add a default delay of 500ms for single image
+                               // rendering
         }
 
         Self {
@@ -264,6 +296,8 @@ impl ImageRenderer {
     }
 
     pub fn draw(&self, target: &mut FrameBuffer) -> bool {
+        //TODO This runs every 10ms, this doesn't need to run that fast everytime when
+        // rendering still images (so maybe we can avoid rendering each time)
         let frame = self.current_frame.load(Ordering::Relaxed);
 
         //get the data for the specified frame
@@ -301,5 +335,9 @@ impl ImageRenderer {
             return has_gif_ended;
         }
         false
+    }
+
+    pub fn set_display_time(&self) {
+        *self.time_frame_last_update.borrow_mut() = Instant::now();
     }
 }
