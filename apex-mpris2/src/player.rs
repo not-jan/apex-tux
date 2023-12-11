@@ -47,7 +47,7 @@ impl MetadataTrait for Metadata {
         match (self.length_::<i64>(), self.length_::<u64>()) {
             (_, Ok(val)) => Ok(val),
             (Ok(val), _) => Ok(val as u64),
-            (_, _) => Err(anyhow!("Couldn't get length!"))
+            (_, _) => Err(anyhow!("Couldn't get length!")),
         }
     }
 }

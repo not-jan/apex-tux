@@ -1,6 +1,9 @@
 use crate::Command;
 use anyhow::Result;
-use global_hotkey::{GlobalHotKeyManager, hotkey::{HotKey, Modifiers, Code}, GlobalHotKeyEvent};
+use global_hotkey::{
+    hotkey::{Code, HotKey, Modifiers},
+    GlobalHotKeyEvent, GlobalHotKeyManager,
+};
 use tokio::sync::broadcast;
 
 pub struct InputManager {
@@ -13,18 +16,18 @@ impl InputManager {
 
         let modifiers = Some(Modifiers::ALT | Modifiers::SHIFT);
 
-        let hotkey_previous = HotKey::new (modifiers, Code::KeyA);
-        let hotkey_next = HotKey::new (modifiers, Code::KeyD);
+        let hotkey_previous = HotKey::new(modifiers, Code::KeyA);
+        let hotkey_next = HotKey::new(modifiers, Code::KeyD);
 
         hkm.register(hotkey_previous).unwrap();
         hkm.register(hotkey_next).unwrap();
 
-        let hotkey_handler = move|event: GlobalHotKeyEvent| {
+        let hotkey_handler = move |event: GlobalHotKeyEvent| {
             if event.id == hotkey_previous.id() {
                 sender
                     .send(Command::PreviousSource)
                     .expect("Failed to send command!");
-            }else{
+            } else {
                 sender
                     .send(Command::NextSource)
                     .expect("Failed to send command!");
