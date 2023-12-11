@@ -15,7 +15,7 @@ use crate::render::{
     util::ProgressBar,
 };
 use embedded_graphics::{
-    mono_font::{ascii, MonoFont, MonoTextStyle},
+    mono_font::{iso_8859_15, MonoFont, MonoTextStyle},
     text::Text,
 };
 use futures_core::stream::Stream;
@@ -73,7 +73,7 @@ impl ContentProvider for Notification {
         let progress = ProgressBar::new(origin, self.ticks as f32);
 
         // TODO: Remove hardcoded font
-        let style = MonoTextStyle::new(&ascii::FONT_6X10, BinaryColor::On);
+        let style = MonoTextStyle::new(&iso_8859_15::FONT_6X10, BinaryColor::On);
 
         Ok(try_stream! {
             for i in 0..self.ticks {
@@ -121,7 +121,7 @@ impl<'a> NotificationBuilder<'a> {
     }
 
     fn font(&self) -> &'a MonoFont {
-        self.font.unwrap_or(&ascii::FONT_6X10)
+        self.font.unwrap_or(&iso_8859_15::FONT_6X10)
     }
 
     fn offset(&self) -> Size {

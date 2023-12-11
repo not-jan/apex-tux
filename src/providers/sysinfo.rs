@@ -10,7 +10,7 @@ use num_traits::{pow, Pow};
 use config::Config;
 use embedded_graphics::{
     geometry::Point,
-    mono_font::{ascii, MonoTextStyle},
+    mono_font::{iso_8859_15, MonoTextStyle},
     pixelcolor::BinaryColor,
     primitives::{Primitive, PrimitiveStyle, Rectangle},
     text::{renderer::TextRenderer, Baseline, Text},
@@ -220,7 +220,7 @@ impl Sysinfo {
         text: String,
         fill: f64,
     ) -> Result<()> {
-        let style = MonoTextStyle::new(&ascii::FONT_4X6, BinaryColor::On);
+        let style = MonoTextStyle::new(&iso_8859_15::FONT_4X6, BinaryColor::On);
         let metrics = style.measure_string(&text, Point::zero(), Baseline::Top);
 
         let slot_y = slot * 8 + 1;
