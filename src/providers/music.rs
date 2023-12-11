@@ -24,7 +24,7 @@ use crate::render::{
 use apex_music::{AsyncPlayer, Metadata, Progress};
 use config::Config;
 use embedded_graphics::{
-    mono_font::{ascii, MonoTextStyle},
+    mono_font::{iso_8859_15, MonoTextStyle},
     text::{Baseline, Text},
 };
 use futures::StreamExt;
@@ -101,7 +101,7 @@ lazy_static! {
 lazy_static! {
     static ref IDLE_TEMPLATE: FrameBuffer = {
         let mut base = *PAUSE_TEMPLATE;
-        let style = MonoTextStyle::new(&ascii::FONT_6X10, BinaryColor::On);
+        let style = MonoTextStyle::new(&iso_8859_15::FONT_6X10, BinaryColor::On);
         Text::with_baseline(
             "No player found",
             Point::new(5 + 3 + 24, 3),

@@ -9,7 +9,7 @@ use chrono::{DateTime, Local};
 use config::Config;
 use embedded_graphics::{
     geometry::Point,
-    mono_font::{ascii, MonoTextStyle},
+    mono_font::{iso_8859_15, MonoTextStyle},
     pixelcolor::BinaryColor,
     text::{renderer::TextRenderer, Baseline, Text},
     Drawable,
@@ -66,7 +66,7 @@ impl Clock {
 
         let text = local.format(format_string).to_string();
         let mut buffer = FrameBuffer::new();
-        let style = MonoTextStyle::new(&ascii::FONT_8X13_BOLD, BinaryColor::On);
+        let style = MonoTextStyle::new(&iso_8859_15::FONT_8X13_BOLD, BinaryColor::On);
         let metrics = style.measure_string(&text, Point::zero(), Baseline::Top);
         let height: i32 = (metrics.bounding_box.size.height / 2) as i32;
         let width: i32 = (metrics.bounding_box.size.width / 2) as i32;

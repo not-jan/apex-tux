@@ -3,7 +3,7 @@ use apex_hardware::BitVec;
 use embedded_graphics::{
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Point, Size},
-    mono_font::{ascii::FONT_6X10, MonoFont, MonoTextStyle, MonoTextStyleBuilder},
+    mono_font::{iso_8859_15::FONT_6X10, MonoFont, MonoTextStyle, MonoTextStyleBuilder},
     pixelcolor::BinaryColor,
     text::{renderer::TextRenderer, Baseline, Text},
     Drawable, Pixel,
