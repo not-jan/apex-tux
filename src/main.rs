@@ -75,9 +75,16 @@ pub async fn main() -> Result<()> {
     let mut device = Engine::new().await?;
 
     let mut settings = config::Config::default();
+    // Add in `$USER_CONFIG_DIR/apex-tux/settings.toml`
+    if let Some(user_config_dir) = dirs::config_dir() {
+        settings.merge(
+            config::File::with_name(&user_config_dir.join("apex-tux/settings").to_string_lossy())
+                .required(false),
+        )?;
+    };
     settings
         // Add in `./settings.toml`
-        .merge(config::File::with_name("settings"))?
+        .merge(config::File::with_name("settings").required(false))?
         // Add in settings from the environment (with a prefix of APEX)
         // Eg.. `APEX_DEBUG=1 ./target/app` would set the `debug` key
         .merge(config::Environment::with_prefix("APEX_"))?;
