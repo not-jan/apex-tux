@@ -93,6 +93,8 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="<PRODUCT ID HERE>
 
 The default configuration is in `settings.toml`.
 This repository ships with a default configuration that covers most parts and contains documentation for the important keys.
+The program will look for configuration first in the platform-specific `$USER_CONFIG_DIR/apex-tux/`, then in the current working directory.
+You can also override specific settings with `APEX_*` environment variables.
 
 You can also run the software to find errors on configuration and to decide what is the right setup you need:
 

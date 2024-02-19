@@ -54,6 +54,7 @@ apex-engine = { path = "./apex-engine", optional = true }
 sysinfo = { version = "0.27.7", optional = true }
 lazy_static = "1.4.0"
 image  = { version = "0.24.6", optional = true }
+dirs = "5.0.1"
 
 
 [target.'cfg(target_os = "windows")'.dependencies]
