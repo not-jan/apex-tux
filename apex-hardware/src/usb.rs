@@ -18,6 +18,7 @@ pub static STEELSERIES_VENDOR_ID: u16 = 0x1038;
 /// just means that no one has tried it or bothered to add it yet.
 enum SupportedDevice {
     ApexProTKL = 0x1614,
+    ApexProTKLWireless = 0x1630,
     // Never tested
     Apex7 = 0x1612,
     ApexPro = 0x1610,
