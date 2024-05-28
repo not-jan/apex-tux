@@ -47,7 +47,7 @@ compile_error!(
 use apex_simulator::Simulator;
 
 use crate::render::{scheduler, scheduler::Scheduler};
-#[cfg(all(feature = "engine"))]
+#[cfg(feature = "engine")]
 use apex_engine::Engine;
 use apex_hardware::AsyncDevice;
 #[cfg(all(feature = "usb", target_os = "linux", not(feature = "engine")))]
@@ -71,7 +71,7 @@ pub async fn main() -> Result<()> {
     #[cfg(feature = "hotkeys")]
     let hkm = apex_input::InputManager::new(tx.clone());
 
-    #[cfg(all(feature = "engine"))]
+    #[cfg(feature = "engine")]
     let mut device = Engine::new().await?;
 
     let mut settings = config::Config::default();

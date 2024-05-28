@@ -76,7 +76,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
     pub fn new(device: T) -> Self {
         Self {
             device,
-            _marker: std::marker::PhantomData::default(),
+            _marker: PhantomData::default(),
         }
     }
 
@@ -145,7 +145,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
             .into_iter()
             .into_iter()
             .map(Box::into_pin)
-            .map(futures::StreamExt::fuse)
+            .map(StreamExt::fuse)
             .collect::<Vec<_>>();
         let size = providers.len();
         let z = current.clone();
