@@ -81,7 +81,7 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="<PRODUCT ID HERE>
 
 - Install Rust **nightly** using [rustup](https://rustup.rs/)
 - Install required dependencies
-  - For Ubuntu: `sudo apt install libssl-dev dbus-dev libusb-1.0-0-dev`
+  - For Ubuntu: `sudo apt install libssl-dev libdbus-1-dev libusb-1.0-0-dev`
 - Clone the repository: `git clone git@github.com:not-jan/apex-tux.git`
 - Change the directory into the repository: `cd apex-tux`
 - Compile the app using the features you want
