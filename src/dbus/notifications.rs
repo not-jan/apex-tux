@@ -22,7 +22,7 @@ use futures_core::Stream;
 use lazy_static::lazy_static;
 use linkme::distributed_slice;
 use log::{debug, info};
-use std::{convert::TryFrom, time::Duration};
+use std::{convert::TryFrom, pin::Pin, time::Duration};
 use tinybmp::Bmp;
 
 #[distributed_slice(NOTIFICATION_PROVIDERS)]
@@ -69,7 +69,7 @@ impl NotificationType {
 impl TryFrom<Message> for NotificationType {
     type Error = anyhow::Error;
 
-    fn try_from(value: Message) -> Result<Self, Self::Error> {
+    fn try_from(value: Message) -> Result<Self> {
         let source = value.get_source()?;
 
         Ok(match source.as_str() {
@@ -103,11 +103,13 @@ impl MessageExt for Message {
 }
 
 impl NotificationProvider for Dbus {
-    type NotificationStream<'a> = impl Stream<Item = Result<Notification>> + 'a;
+    type NotificationStream<'a> = Pin<Box<dyn Stream<Item = Result<Notification>> + 'a>>
+    where
+        Self: 'a;
 
     // This needs to be enabled until full GAT support is here
     #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::NotificationStream<'this>> {
+    fn stream<'this>(&'this mut self) -> Result<Pin<Box<dyn Stream<Item = Result<Notification>> + 'this>>> {
         let mut rule = MatchRule::new();
         rule.interface = Some(Interface::from("org.freedesktop.Notifications"));
         rule.member = Some(Member::from("Notify"));
@@ -154,7 +156,7 @@ impl NotificationProvider for Dbus {
             Ok::<(), anyhow::Error>(())
         });
 
-        Ok(try_stream! {
+        Ok(Box::pin(try_stream! {
              while let Some(msg) = rx.next().await {
                 let ty = NotificationType::try_from(msg)?;
 
@@ -167,6 +169,6 @@ impl NotificationProvider for Dbus {
                 }
             }
             println!("WTF?");
-        })
+        }))
     }
 }

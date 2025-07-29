@@ -9,6 +9,8 @@ use embedded_graphics::{
 };
 use num_traits::AsPrimitive;
 
+use std::pin::Pin;
+
 use crate::render::{
     scheduler::{TICKS_PER_SECOND, TICK_LENGTH},
     text::{Scrollable, ScrollableBuilder},
@@ -62,11 +64,11 @@ pub trait NotificationProvider {
 }
 
 impl ContentProvider for Notification {
-    type ContentStream<'a> = impl Stream<Item = Result<FrameBuffer>> + 'a;
+    type ContentStream<'a> = Pin<Box<dyn Stream<Item = Result<FrameBuffer>> + 'a>>;
 
     // This needs to be enabled until full GAT support is here
     #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
+    fn stream<'this>(&'this mut self) -> Result<Pin<Box<dyn Stream<Item = Result<FrameBuffer>> + 'this>>> {
         let mut interval = time::interval(Duration::from_millis(TICK_LENGTH.as_()));
         interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
         let origin = Point::new(117, 29);
@@ -75,7 +77,7 @@ impl ContentProvider for Notification {
         // TODO: Remove hardcoded font
         let style = MonoTextStyle::new(&iso_8859_15::FONT_6X10, BinaryColor::On);
 
-        Ok(try_stream! {
+        Ok(Box::pin(try_stream! {
             for i in 0..self.ticks {
                 let mut image = self.frame.clone();
                 self.title.at_tick(&mut image, if self.scroll {
@@ -88,7 +90,7 @@ impl ContentProvider for Notification {
                 yield image;
                 interval.tick().await;
             }
-        })
+        }))
     }
 
     fn name(&self) -> &'static str {

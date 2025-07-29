@@ -51,7 +51,7 @@ impl Default for Target {
 impl TryFrom<String> for Target {
     type Error = anyhow::Error;
 
-    fn try_from(value: String) -> std::prelude::rust_2015::Result<Self, Self::Error> {
+    fn try_from(value: String) -> std::prelude::rust_2015::Result<Self, <Self as TryFrom<String>>::Error> {
         match value.as_str() {
             "USD" | "usd" | "dollar" => Ok(Target::Usd),
             "eur" | "EUR" | "euro" | "Euro" => Ok(Target::Eur),
@@ -181,7 +181,7 @@ impl ContentProvider for Coindesk {
     type ContentStream<'a> = impl Stream<Item = Result<FrameBuffer>> + 'a;
 
     #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
+    fn stream<'this>(&'this mut self) -> Result<<Self as ContentProvider>::ContentStream<'this>> {
         // Coindesk updates its data every minute so we only need to fetch every minute
         let mut refetch = time::interval(Duration::from_secs(60));
         refetch.set_missed_tick_behavior(MissedTickBehavior::Skip);

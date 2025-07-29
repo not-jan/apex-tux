@@ -41,9 +41,9 @@ impl DrawTarget for ScrollableCanvas {
     type Color = BinaryColor;
     type Error = anyhow::Error;
 
-    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), <Self as DrawTarget>::Error>
     where
-        I: IntoIterator<Item = Pixel<Self::Color>>,
+        I: IntoIterator<Item = Pixel<<Self as DrawTarget>::Color>>,
     {
         for Pixel(coord, color) in pixels {
             let (x, y) = (coord.x, coord.y);
@@ -55,7 +55,7 @@ impl DrawTarget for ScrollableCanvas {
         Ok(())
     }
 
-    fn clear(&mut self, color: Self::Color) -> Result<(), Self::Error> {
+    fn clear(&mut self, color: <Self as DrawTarget>::Color) -> Result<(), <Self as DrawTarget>::Error> {
         self.canvas.fill(color.is_on());
         Ok(())
     }
@@ -79,7 +79,7 @@ pub struct StatefulScrollable {
 impl TryFrom<ScrollableBuilder> for StatefulScrollable {
     type Error = anyhow::Error;
 
-    fn try_from(value: ScrollableBuilder) -> Result<Self, Self::Error> {
+    fn try_from(value: ScrollableBuilder) -> Result<Self, <Self as TryFrom<ScrollableBuilder>>::Error> {
         let text = value.build()?;
         Ok(StatefulScrollable {
             builder: value,
@@ -200,12 +200,12 @@ impl Drawable for Scrollable {
     type Color = BinaryColor;
     type Output = ();
 
-    fn draw<D>(&self, target: &mut D) -> Result<Self::Output, <D as DrawTarget>::Error>
+    fn draw<D>(&self, target: &mut D) -> Result<<Self as Drawable>::Output, <D as DrawTarget>::Error>
     where
-        D: DrawTarget<Color = Self::Color>,
+        D: DrawTarget<Color = <Self as Drawable>::Color>,
     {
         self.at_tick(target, self.scroll)?;
-        Ok::<Self::Output, <D as DrawTarget>::Error>(())
+        Ok::<<Self as Drawable>::Output, <D as DrawTarget>::Error>(())
     }
 }
 

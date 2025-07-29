@@ -21,6 +21,7 @@ use tokio::{
     time,
     time::{Duration, MissedTickBehavior},
 };
+use std::pin::Pin;
 
 #[doc(hidden)]
 #[distributed_slice(CONTENT_PROVIDERS)]
@@ -84,21 +85,21 @@ impl Clock {
 }
 
 impl ContentProvider for Clock {
-    type ContentStream<'a> = impl Stream<Item = Result<FrameBuffer>> + 'a;
+    type ContentStream<'a> = Pin<Box<dyn Stream<Item = Result<FrameBuffer>> + 'a>>;
 
     // This needs to be enabled until full GAT support is here
     #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
+    fn stream<'this>(&'this mut self) -> Result<Pin<Box<dyn Stream<Item = Result<FrameBuffer>> + 'this>>> {
         let mut interval = time::interval(Duration::from_millis(50));
         interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
-        Ok(try_stream! {
+        Ok(Box::pin(try_stream! {
             loop {
                 if let Ok(image) = self.render() {
                     yield image;
                 }
                 interval.tick().await;
             }
-        })
+        }))
     }
 
     fn name(&self) -> &'static str {

@@ -2,9 +2,7 @@
 #![feature(
     type_alias_impl_trait,
     try_blocks,
-    const_fn_floating_point_arithmetic,
     inherent_associated_types,
-    async_closure,
     async_iterator,
     decl_macro,
     impl_trait_in_assoc_type

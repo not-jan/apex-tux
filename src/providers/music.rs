@@ -1,6 +1,5 @@
 use crate::render::display::ContentProvider;
 #[cfg(not(target_os = "windows"))]
-use anyhow::anyhow;
 use anyhow::Result;
 use async_stream::try_stream;
 #[cfg(not(target_os = "windows"))]
@@ -12,6 +11,8 @@ use embedded_graphics::{
 };
 use futures_core::stream::Stream;
 use linkme::distributed_slice;
+
+use std::pin::Pin;
 
 use log::info;
 use tinybmp::Bmp;
@@ -231,11 +232,11 @@ impl MediaPlayerBuilder {
 }
 
 impl ContentProvider for MediaPlayerBuilder {
-    type ContentStream<'a> = impl Stream<Item = Result<FrameBuffer>> + 'a;
+    type ContentStream<'a> = Pin<Box<dyn Stream<Item = Result<FrameBuffer>> + 'a>>;
 
     // This needs to be enabled until full GAT support is here
     #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
+    fn stream<'this>(&'this mut self) -> Result<Pin<Box<dyn Stream<Item = Result<FrameBuffer>> + 'this>>> {
         info!(
             "Trying to connect to DBUS with player preference: {:?}",
             self.name
@@ -243,7 +244,7 @@ impl ContentProvider for MediaPlayerBuilder {
 
         let mut renderer = MediaPlayerRenderer::new()?;
 
-        Ok(try_stream! {
+        Ok(Box::pin(try_stream! {
             #[cfg(target_os = "windows")]
             let mpris = apex_windows::Player::new()?;
             #[cfg(target_os = "linux")]
@@ -281,7 +282,7 @@ impl ContentProvider for MediaPlayerBuilder {
                     }
                 }
             }
-        })
+        }))
     }
 
     fn name(&self) -> &'static str {
