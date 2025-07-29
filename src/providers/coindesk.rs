@@ -20,7 +20,8 @@ use lazy_static::lazy_static;
 use linkme::distributed_slice;
 use log::info;
 use reqwest::{header, Client, ClientBuilder};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use serde_json::Value;
 use std::{convert::TryFrom, time::Duration};
 use tinybmp::Bmp;
 use tokio::{time, time::MissedTickBehavior};
@@ -85,7 +86,7 @@ const COINDESK_URL: &str = "https://api.coindesk.com/v1/bpi/currentprice.json";
 
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Currency {
     code: String,
     symbol: String,
@@ -94,31 +95,74 @@ pub struct Currency {
     rate_float: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+impl Currency {
+    fn from_value(value: &Value) -> Result<Self> {
+        Ok(Currency {
+            code: value["code"].as_str().unwrap_or_default().to_string(),
+            symbol: value["symbol"].as_str().unwrap_or_default().to_string(),
+            rate: value["rate"].as_str().unwrap_or_default().to_string(),
+            description: value["description"].as_str().unwrap_or_default().to_string(),
+            rate_float: value["rate_float"].as_f64().unwrap_or_default(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Time {
     updated: String,
-    #[serde(rename(serialize = "updatedISO", deserialize = "updatedISO"))]
+    #[serde(rename(serialize = "updatedISO"))]
     updated_iso: String,
     updateduk: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+impl Time {
+    fn from_value(value: &Value) -> Result<Self> {
+        Ok(Time {
+            updated: value["updated"].as_str().unwrap_or_default().to_string(),
+            updated_iso: value["updatedISO"].as_str().unwrap_or_default().to_string(),
+            updateduk: value["updateduk"].as_str().unwrap_or_default().to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct BitcoinPrice {
-    #[serde(rename(serialize = "USD", deserialize = "USD"))]
+    #[serde(rename(serialize = "USD"))]
     usd: Currency,
-    #[serde(rename(serialize = "GBP", deserialize = "GBP"))]
+    #[serde(rename(serialize = "GBP"))]
     gbp: Currency,
-    #[serde(rename(serialize = "EUR", deserialize = "EUR"))]
+    #[serde(rename(serialize = "EUR"))]
     eur: Currency,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+impl BitcoinPrice {
+    fn from_value(value: &Value) -> Result<Self> {
+        Ok(BitcoinPrice {
+            usd: Currency::from_value(&value["USD"])?,
+            gbp: Currency::from_value(&value["GBP"])?,
+            eur: Currency::from_value(&value["EUR"])?,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct Status {
     time: Time,
     disclaimer: String,
-    #[serde(rename(serialize = "chartName", deserialize = "chartName"))]
+    #[serde(rename(serialize = "chartName"))]
     chart_name: String,
     bpi: BitcoinPrice,
+}
+
+impl Status {
+    fn from_value(value: &Value) -> Result<Self> {
+        Ok(Status {
+            time: Time::from_value(&value["time"])?,
+            disclaimer: value["disclaimer"].as_str().unwrap_or_default().to_string(),
+            chart_name: value["chartName"].as_str().unwrap_or_default().to_string(),
+            bpi: BitcoinPrice::from_value(&value["bpi"])?,
+        })
+    }
 }
 
 impl Status {
@@ -165,13 +209,16 @@ impl Coindesk {
     }
 
     pub async fn fetch(&self) -> Result<Status> {
-        let status = self
+        let response_text = self
             .client
             .get(COINDESK_URL)
             .send()
             .await?
-            .json::<Status>()
+            .text()
             .await?;
+            
+        let json_value: Value = serde_json::from_str(&response_text)?;
+        let status = Status::from_value(&json_value)?;
 
         Ok(status)
     }

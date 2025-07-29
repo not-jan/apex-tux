@@ -28,7 +28,7 @@ futures-core = "0.3.31"
 futures = "0.3.31"
 async-stream = "0.3.6"
 embedded-graphics = "0.8.1"
-serde = { version = "1.0.219", optional = true, features = ["derive"] }
+serde = { version = "1.0.180", optional = true, features = ["derive"] }
 log = "0.4.27"
 image  = { version = "0.25.6", optional = true }
 
