@@ -24,7 +24,7 @@ impl ProgressBar {
     }
 
     fn calculate_progress(&self, current: f32) -> Angle {
-        (((current / self.maximum_value) * 360.0) * -1.0).deg()
+        (-((current / self.maximum_value) * 360.0)).deg()
     }
 
     pub fn draw_at<T: DrawTarget<Color = BinaryColor>>(

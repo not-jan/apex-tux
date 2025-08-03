@@ -19,10 +19,9 @@ use dbus_tokio::connection;
 use embedded_graphics::pixelcolor::BinaryColor;
 use futures::{channel::mpsc, StreamExt};
 use futures_core::Stream;
-use lazy_static::lazy_static;
 use linkme::distributed_slice;
 use log::{debug, info};
-use std::{convert::TryFrom, time::Duration};
+use std::{convert::TryFrom, sync::LazyLock, time::Duration};
 use tinybmp::Bmp;
 
 #[distributed_slice(NOTIFICATION_PROVIDERS)]
@@ -36,10 +35,9 @@ fn register_callback() -> Result<Box<dyn NotificationWrapper>> {
 }
 
 static DISCORD_ICON: &[u8] = include_bytes!("./../../assets/discord.bmp");
-lazy_static! {
-    static ref DISCORD_ICON_BMP: Bmp<'static, BinaryColor> =
-        Bmp::<BinaryColor>::from_slice(DISCORD_ICON).expect("Failed to parse BMP");
-}
+
+static DISCORD_ICON_BMP: LazyLock<Bmp<'static, BinaryColor>> =
+    LazyLock::new(|| Bmp::<BinaryColor>::from_slice(DISCORD_ICON).expect("Failed to parse BMP"));
 
 pub struct Dbus {}
 
@@ -69,7 +67,7 @@ impl NotificationType {
 impl TryFrom<Message> for NotificationType {
     type Error = anyhow::Error;
 
-    fn try_from(value: Message) -> Result<Self, Self::Error> {
+    fn try_from(value: Message) -> Result<Self, <Self as TryFrom<Message>>::Error> {
         let source = value.get_source()?;
 
         Ok(match source.as_str() {
@@ -107,7 +105,7 @@ impl NotificationProvider for Dbus {
 
     // This needs to be enabled until full GAT support is here
     #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::NotificationStream<'this>> {
+    fn stream(&mut self) -> Result<<Self as NotificationProvider>::NotificationStream<'_>> {
         let mut rule = MatchRule::new();
         rule.interface = Some(Interface::from("org.freedesktop.Notifications"));
         rule.member = Some(Member::from("Notify"));
@@ -116,7 +114,7 @@ impl NotificationProvider for Dbus {
 
         tokio::spawn(async {
             let err = resource.await;
-            panic!("Lost connection to D-Bus: {}", err);
+            panic!("Lost connection to D-Bus: {err}");
         });
 
         let (mut tx, mut rx) = mpsc::channel(10);
@@ -136,7 +134,7 @@ impl NotificationProvider for Dbus {
             // change happened back in 2017 I've elected for not supporting that
             // here.
             proxy
-                .method_call(
+                .method_call::<(), _, _, _>(
                     "org.freedesktop.DBus.Monitoring",
                     "BecomeMonitor",
                     (vec![rule.match_str()], 0_u32),
@@ -160,10 +158,9 @@ impl NotificationProvider for Dbus {
 
                 if let NotificationType::Unsupported = &ty {
                     continue;
-                } else {
-                    if let Ok(notif) = ty.render() {
-                        yield notif;
-                    }
+                }
+                if let Ok(notif) = ty.render() {
+                    yield notif;
                 }
             }
             println!("WTF?");

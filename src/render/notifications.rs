@@ -57,8 +57,7 @@ pub trait NotificationProvider {
     where
         Self: 'a;
 
-    #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::NotificationStream<'this>>;
+    fn stream(&mut self) -> Result<Self::NotificationStream<'_>>;
 }
 
 impl ContentProvider for Notification {
@@ -66,7 +65,7 @@ impl ContentProvider for Notification {
 
     // This needs to be enabled until full GAT support is here
     #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
+    fn stream(&mut self) -> Result<<Self as ContentProvider>::ContentStream<'_>> {
         let mut interval = time::interval(Duration::from_millis(TICK_LENGTH.as_()));
         interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
         let origin = Point::new(117, 29);
@@ -77,7 +76,7 @@ impl ContentProvider for Notification {
 
         Ok(try_stream! {
             for i in 0..self.ticks {
-                let mut image = self.frame.clone();
+                let mut image = self.frame;
                 self.title.at_tick(&mut image, if self.scroll {
                     i
                 } else {
@@ -120,7 +119,7 @@ impl<'a> NotificationBuilder<'a> {
         self.title.unwrap_or("Notification")
     }
 
-    fn font(&self) -> &'a MonoFont {
+    fn font(&self) -> &'a MonoFont<'_> {
         self.font.unwrap_or(&iso_8859_15::FONT_6X10)
     }
 

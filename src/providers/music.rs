@@ -1,6 +1,5 @@
 use crate::render::display::ContentProvider;
-#[cfg(not(target_os = "windows"))]
-use anyhow::anyhow;
+
 use anyhow::Result;
 use async_stream::try_stream;
 #[cfg(not(target_os = "windows"))]
@@ -28,26 +27,27 @@ use embedded_graphics::{
     text::{Baseline, Text},
 };
 use futures::StreamExt;
-use std::{convert::TryInto, sync::Arc};
+use std::{
+    convert::TryInto,
+    sync::{Arc, LazyLock},
+};
 use tokio::time::{Duration, MissedTickBehavior};
 
 use apex_hardware::FrameBuffer;
 use apex_music::PlaybackStatus;
 use futures::pin_mut;
-use lazy_static::lazy_static;
 
 static NOTE_ICON: &[u8] = include_bytes!("./../../assets/note.bmp");
 static PAUSE_ICON: &[u8] = include_bytes!("./../../assets/pause.bmp");
 
-lazy_static! {
-    static ref PAUSE_BMP: Bmp<'static, BinaryColor> =
-        Bmp::<BinaryColor>::from_slice(PAUSE_ICON).expect("Failed to parse BMP for pause icon!");
-}
+static PAUSE_BMP: LazyLock<Bmp<'static, BinaryColor>> = LazyLock::new(|| {
+    Bmp::<BinaryColor>::from_slice(PAUSE_ICON).expect("Failed to parse BMP for pause icon!")
+});
 
-lazy_static! {
-    static ref NOTE_BMP: Bmp<'static, BinaryColor> =
-        Bmp::<BinaryColor>::from_slice(NOTE_ICON).expect("Failed to parse BMP for note icon!");
-}
+static NOTE_BMP: LazyLock<Bmp<'static, BinaryColor>> = LazyLock::new(|| {
+    Bmp::<BinaryColor>::from_slice(NOTE_ICON).expect("Failed to parse BMP for note icon!")
+});
+
 #[cfg(target_os = "windows")]
 lazy_static! {
 // Windows doesn't expose the current progress within the song so we don't draw
@@ -56,12 +56,11 @@ static ref PLAYER_TEMPLATE: FrameBuffer = FrameBuffer::new();
 }
 
 #[cfg(not(target_os = "windows"))]
-lazy_static! {
-static ref PLAYER_TEMPLATE: FrameBuffer = {
+static PLAYER_TEMPLATE: LazyLock<FrameBuffer> = LazyLock::new(|| {
     let mut base = FrameBuffer::new();
     let style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
 
-    let points = vec![
+    let points = [
         (Point::new(0, 39), Point::new(127, 39)),
         (Point::new(0, 39), Point::new(0, 39 - 5)),
         (Point::new(127, 39), Point::new(127, 39 - 5)),
@@ -78,41 +77,37 @@ static ref PLAYER_TEMPLATE: FrameBuffer = {
         .expect("Failed to prepare template image for music player!");
 
     base
-};
-}
-lazy_static! {
-    static ref PLAY_TEMPLATE: FrameBuffer = {
-        let mut base = *PLAYER_TEMPLATE;
-        Image::new(&*NOTE_BMP, Point::new(5, 5))
-            .draw(&mut base)
-            .expect("Failed to prepare 'play' template for music player");
-        base
-    };
-}
-lazy_static! {
-    static ref PAUSE_TEMPLATE: FrameBuffer = {
-        let mut base = *PLAYER_TEMPLATE;
-        Image::new(&*PAUSE_BMP, Point::new(5, 5))
-            .draw(&mut base)
-            .expect("Failed to prepare 'pause' template for music player");
-        base
-    };
-}
-lazy_static! {
-    static ref IDLE_TEMPLATE: FrameBuffer = {
-        let mut base = *PAUSE_TEMPLATE;
-        let style = MonoTextStyle::new(&iso_8859_15::FONT_6X10, BinaryColor::On);
-        Text::with_baseline(
-            "No player found",
-            Point::new(5 + 3 + 24, 3),
-            style,
-            Baseline::Top,
-        )
+});
+
+static PLAY_TEMPLATE: LazyLock<FrameBuffer> = LazyLock::new(|| {
+    let mut base = *PLAYER_TEMPLATE;
+    Image::new(&*NOTE_BMP, Point::new(5, 5))
         .draw(&mut base)
-        .expect("Failed to prepare 'idle' template for music player");
-        base
-    };
-}
+        .expect("Failed to prepare 'play' template for music player");
+    base
+});
+
+static PAUSE_TEMPLATE: LazyLock<FrameBuffer> = LazyLock::new(|| {
+    let mut base = *PLAYER_TEMPLATE;
+    Image::new(&*PAUSE_BMP, Point::new(5, 5))
+        .draw(&mut base)
+        .expect("Failed to prepare 'pause' template for music player");
+    base
+});
+
+static IDLE_TEMPLATE: LazyLock<FrameBuffer> = LazyLock::new(|| {
+    let mut base = *PAUSE_TEMPLATE;
+    let style = MonoTextStyle::new(&iso_8859_15::FONT_6X10, BinaryColor::On);
+    Text::with_baseline(
+        "No player found",
+        Point::new(5 + 3 + 24, 3),
+        style,
+        Baseline::Top,
+    )
+    .draw(&mut base)
+    .expect("Failed to prepare 'idle' template for music player");
+    base
+});
 
 static UNKNOWN_TITLE: &str = "Unknown title";
 static UNKNOWN_ARTIST: &str = "Unknown artist";
@@ -233,9 +228,7 @@ impl MediaPlayerBuilder {
 impl ContentProvider for MediaPlayerBuilder {
     type ContentStream<'a> = impl Stream<Item = Result<FrameBuffer>> + 'a;
 
-    // This needs to be enabled until full GAT support is here
-    #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
+    fn stream(&mut self) -> Result<<Self as ContentProvider>::ContentStream<'_>> {
         info!(
             "Trying to connect to DBUS with player preference: {:?}",
             self.name
@@ -269,7 +262,7 @@ impl ContentProvider for MediaPlayerBuilder {
                 let tracker = mpris.stream().await?;
                 pin_mut!(tracker);
 
-                while let Some(_) = tracker.next().await {
+                while (tracker.next().await).is_some() {
                     // TODO: We could probably save *some* resources here by making use of the event
                     // that's being called but I don't see enough of a reason to do so at the moment
                     if let Ok(progress) = player.progress().await {
