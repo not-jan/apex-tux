@@ -6,6 +6,7 @@
 )]
 use dbus::{self, arg, nonblock};
 
+#[allow(dead_code)]
 pub trait MediaPlayer2Player {
     fn next(&self) -> nonblock::MethodReply<()>;
     fn previous(&self) -> nonblock::MethodReply<()>;
@@ -238,6 +239,7 @@ impl<'a, T: nonblock::NonblockReply, C: ::std::ops::Deref<Target = T>> MediaPlay
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct MediaPlayer2PlayerSeeked {
     pub position: i64,
 }

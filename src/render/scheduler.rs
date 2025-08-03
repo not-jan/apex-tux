@@ -76,10 +76,11 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
     pub fn new(device: T) -> Self {
         Self {
             device,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub async fn start(
         &mut self,
         tx: broadcast::Sender<Command>,
@@ -95,6 +96,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
         #[cfg(target_os = "macos")]
         let mut providers = [
             crate::providers::clock::PROVIDER_INIT(&mut config)?,
+            #[cfg(feature = "crypto")]
             crate::providers::coindesk::PROVIDER_INIT(&mut config)?,
         ];
 
@@ -109,7 +111,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
             .partition_result();
 
         for e in errors {
-            error!("{}", e);
+            error!("{e}");
         }
 
         let mut notifications = stream::select_all(notifications.into_iter());
@@ -123,11 +125,11 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
             .iter_mut()
             .map(|i| (i.provider_name(), i.proxy_stream()))
             .filter(|(name, _)| {
-                let key = format!("{}.enabled", name);
+                let key = format!("{name}.enabled");
                 config.get_bool(&key).unwrap_or(true)
             })
             .map(|(name, i)| {
-                let key = format!("{}.priority", name);
+                let key = format!("{name}.priority");
                 let prio = config.get_int(&key).unwrap_or(99i64);
                 (name, i, prio)
             })
@@ -138,11 +140,10 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
             .partition_result();
 
         for e in errors {
-            error!("{}", e);
+            error!("{e}");
         }
 
         let providers = providers
-            .into_iter()
             .into_iter()
             .map(Box::into_pin)
             .map(StreamExt::fuse)
@@ -157,11 +158,11 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
         //flag to know if auto changer is enabled
         let is_auto_change_enabled = interval_between_change != 0;
         //the interval to check wether to change the screen or not
-        let mut change = time::interval(Duration::from_secs(if !is_auto_change_enabled {
+        let mut change = time::interval(Duration::from_secs(if is_auto_change_enabled {
+            1
+        } else {
             // this is done for performance (don't know if it actually has a big impact)
             300
-        } else {
-            1
         }));
         change.set_missed_tick_behavior(MissedTickBehavior::Skip);
         //the last time the screen was changed
@@ -206,7 +207,7 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
                     if is_auto_change_enabled {
                         //get the time since the last update
                         let current_time = Instant::now();
-                        let elapsed_time = current_time - time_last_change.borrow().clone();
+                        let elapsed_time = current_time - *time_last_change.borrow();
                         //if the last update is over the choosen interval
                         if elapsed_time > Duration::from_secs(interval_between_change as u64) {
                             //change the screen

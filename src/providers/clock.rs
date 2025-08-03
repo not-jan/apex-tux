@@ -86,9 +86,7 @@ impl Clock {
 impl ContentProvider for Clock {
     type ContentStream<'a> = impl Stream<Item = Result<FrameBuffer>> + 'a;
 
-    // This needs to be enabled until full GAT support is here
-    #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
+    fn stream(&mut self) -> Result<<Self as ContentProvider>::ContentStream<'_>> {
         let mut interval = time::interval(Duration::from_millis(50));
         interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
         Ok(try_stream! {

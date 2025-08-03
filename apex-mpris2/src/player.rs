@@ -94,12 +94,12 @@ impl MPRIS2 {
 
                 tokio::select! {
                     msg = seek_stream.next() => {
-                        if let Some(_) = msg {
+                        if msg.is_some() {
                             yield PlayerEvent::Seeked;
                         }
                     },
                     msg = meta_stream.next() => {
-                        if let Some(_) = msg {
+                        if msg.is_some() {
                             yield PlayerEvent::Properties;
                         }
                     },
@@ -205,16 +205,20 @@ impl<'a> Player<'a> {
 impl<'a> AsyncPlayer for Player<'a> {
     type Metadata = Metadata;
 
-    type MetadataFuture<'b> = impl Future<Output = Result<Self::Metadata>> + 'b
+    type MetadataFuture<'b>
+        = impl Future<Output = Result<Self::Metadata>> + 'b
     where
         Self: 'b;
-    type NameFuture<'b> = impl Future<Output = String> + 'b
+    type NameFuture<'b>
+        = impl Future<Output = String> + 'b
     where
         Self: 'b;
-    type PlaybackStatusFuture<'b> = impl Future<Output = Result<PlaybackStatus>> + 'b
+    type PlaybackStatusFuture<'b>
+        = impl Future<Output = Result<PlaybackStatus>> + 'b
     where
         Self: 'b;
-    type PositionFuture<'b> = impl Future<Output = Result<i64>> + 'b
+    type PositionFuture<'b>
+        = impl Future<Output = Result<i64>> + 'b
     where
         Self: 'b;
 

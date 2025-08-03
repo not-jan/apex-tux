@@ -2,9 +2,7 @@
 #![feature(
     type_alias_impl_trait,
     try_blocks,
-    const_fn_floating_point_arithmetic,
     inherent_associated_types,
-    async_closure,
     async_iterator,
     decl_macro,
     impl_trait_in_assoc_type
@@ -60,6 +58,7 @@ use apex_input::Command;
 
 #[tokio::main]
 #[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
 pub async fn main() -> Result<()> {
     SimpleLogger::init(LevelFilter::Info, LoggerConfig::default())?;
 
@@ -81,7 +80,7 @@ pub async fn main() -> Result<()> {
             config::File::with_name(&user_config_dir.join("apex-tux/settings").to_string_lossy())
                 .required(false),
         )?;
-    };
+    }
     settings
         // Add in `./settings.toml`
         .merge(config::File::with_name("settings").required(false))?

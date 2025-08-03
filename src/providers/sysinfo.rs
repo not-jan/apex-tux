@@ -58,16 +58,15 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
         .get_str("sysinfo.net_interface_name")
         .unwrap_or("eth0".to_string());
 
-    if sys
+    if !sys
         .networks()
         .iter()
-        .find(|(name, _)| **name == net_interface_name)
-        .is_none()
+        .any(|(name, _)| **name == net_interface_name)
     {
-        warn!("Couldn't find network interface `{}`", net_interface_name);
+        warn!("Couldn't find network interface `{net_interface_name}`");
         info!("Instead, found those interfaces:");
         for (interface_name, _) in sys.networks() {
-            info!("\t{}", interface_name);
+            info!("\t{interface_name}");
         }
     }
 
@@ -75,16 +74,15 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
         .get_str("sysinfo.sensor_name")
         .unwrap_or("hwmon0 CPU Temperature".to_string());
 
-    if sys
+    if !sys
         .components()
         .iter()
-        .find(|component| component.label() == sensor_name)
-        .is_none()
+        .any(|component| component.label() == sensor_name)
     {
-        warn!("Couldn't find sensor `{}`", sensor_name);
+        warn!("Couldn't find sensor `{sensor_name}`");
         info!("Instead, found those sensors:");
         for component in sys.components() {
-            info!("\t{:?}", component);
+            info!("\t{component:?}");
         }
     }
 
@@ -123,23 +121,23 @@ impl Sysinfo {
     pub fn render(&mut self) -> Result<FrameBuffer> {
         self.poll();
 
-        let load = self.sys.global_cpu_info().cpu_usage() as f64;
+        let load = f64::from(self.sys.global_cpu_info().cpu_usage());
         let freq = self.sys.global_cpu_info().frequency() as f64 / 1000.0;
-        let mem_used = self.sys.used_memory() as f64 / pow(1024, 3) as f64;
+        let mem_used = self.sys.used_memory() as f64 / f64::from(pow(1024, 3));
 
         let mut buffer = FrameBuffer::new();
 
-        self.render_stat(0, &mut buffer, format!("C: {:>4.0}%", load), load / 100.0)?;
-        self.render_stat(
+        Self::render_stat(0, &mut buffer, &format!("C: {load:>4.0}%"), load / 100.0)?;
+        Self::render_stat(
             1,
             &mut buffer,
-            format!("F: {:>4.2}G", freq),
+            &format!("F: {freq:>4.2}G"),
             freq / self.cpu_frequency_max,
         )?;
-        self.render_stat(
+        Self::render_stat(
             2,
             &mut buffer,
-            format!("M: {:>4.1}G", mem_used),
+            &format!("M: {mem_used:>4.1}G"),
             self.sys.used_memory() as f64 / self.sys.total_memory() as f64,
         )?;
 
@@ -162,20 +160,17 @@ impl Sysinfo {
                 (net_load / 1024_f64.pow(net_load_power)).to_string()
             );
 
-            if adjusted_net_load.ends_with(".") {
-                adjusted_net_load = adjusted_net_load.replace(".", "");
+            if adjusted_net_load.ends_with('.') {
+                adjusted_net_load = adjusted_net_load.replace('.', "");
             }
 
-            let _ = self.render_stat(
+            let _ = Self::render_stat(
                 3,
                 &mut buffer,
-                format!(
-                    "{}: {:>4}{}",
-                    net_direction, adjusted_net_load, net_load_unit
-                ),
+                &format!("{net_direction}: {adjusted_net_load:>4}{net_load_unit}"),
                 net_load / (self.net_load_max * 1024_f64.pow(2)),
             );
-        };
+        }
 
         if let Some(c) = self
             .sys
@@ -183,11 +178,11 @@ impl Sysinfo {
             .iter()
             .find(|component| component.label() == self.sensor_name)
         {
-            let _ = self.render_stat(
+            let _ = Self::render_stat(
                 4,
                 &mut buffer,
-                format!("T: {:>4.1}C", c.temperature()),
-                c.temperature() as f64 / self.temperature_max,
+                &format!("T: {:>4.1}C", c.temperature()),
+                f64::from(c.temperature()) / self.temperature_max,
             );
         }
 
@@ -213,19 +208,13 @@ impl Sysinfo {
         self.tick = tick();
     }
 
-    fn render_stat(
-        &self,
-        slot: i32,
-        buffer: &mut FrameBuffer,
-        text: String,
-        fill: f64,
-    ) -> Result<()> {
+    fn render_stat(slot: i32, buffer: &mut FrameBuffer, text: &str, fill: f64) -> Result<()> {
         let style = MonoTextStyle::new(&iso_8859_15::FONT_4X6, BinaryColor::On);
-        let metrics = style.measure_string(&text, Point::zero(), Baseline::Top);
+        let metrics = style.measure_string(text, Point::zero(), Baseline::Top);
 
         let slot_y = slot * 8 + 1;
 
-        Text::with_baseline(&text, Point::new(0, slot_y), style, Baseline::Top).draw(buffer)?;
+        Text::with_baseline(text, Point::new(0, slot_y), style, Baseline::Top).draw(buffer)?;
 
         let bar_start: i32 = metrics.bounding_box.size.width as i32 + 2;
         let border_style = PrimitiveStyle::with_stroke(BinaryColor::On, 1);
@@ -233,7 +222,7 @@ impl Sysinfo {
         let fill_width = if fill.is_infinite() {
             0
         } else {
-            (fill * (127 - bar_start) as f64).floor() as i32
+            (fill * f64::from(127 - bar_start)).floor() as i32
         };
 
         Rectangle::with_corners(Point::new(bar_start, slot_y), Point::new(127, slot_y + 6))
@@ -254,7 +243,7 @@ impl Sysinfo {
 impl ContentProvider for Sysinfo {
     type ContentStream<'a> = impl Stream<Item = Result<FrameBuffer>> + 'a;
 
-    fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>> {
+    fn stream(&mut self) -> Result<<Self as ContentProvider>::ContentStream<'_>> {
         let mut interval = time::interval(Duration::from_millis(self.polling_interval));
         interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
 

@@ -6,9 +6,10 @@ use futures_core::Stream;
 pub trait ContentProvider {
     type ContentStream<'a>: Stream<Item = Result<FrameBuffer>> + 'a
     where
-        Self: 'a;
+        Self: 'a + Sized;
 
-    #[allow(clippy::needless_lifetimes)]
-    fn stream<'this>(&'this mut self) -> Result<Self::ContentStream<'this>>;
+    fn stream(&mut self) -> Result<Self::ContentStream<'_>>
+    where
+        Self: Sized;
     fn name(&self) -> &'static str;
 }
