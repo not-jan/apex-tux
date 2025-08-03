@@ -6,17 +6,13 @@ Make use of your OLED screen instead of letting the SteelSeries logo burn itself
 
 ![Music Player in Simulator](./resources/simulator-music.png)
 ![Clock  in Simulator](./resources/simulator-clock.png)
-![Bitcoing exchange  in Simulator](./resources/simulator-btc.png)
-
 ![Music Player in device OLED screen](./resources/music.png)
-![Bitcoin exchange in device OLED screen](./resources/btc.png)
 ![Sysinfo in device OLED screen](./resources/system-metrics.png)
 
 ## Features
 
 - Music player integration (requires DBus)
 - Discord notifications (requires DBus)
-- Bitcoin price
 - Clock
 - System metrics
 - Scrolling text
@@ -121,8 +117,7 @@ $ target/release/apex-tux
 23:43:05 [INFO]         nvme Sensor 2 HFM001TD3JX013N temp3: 43.85°C (max: 43.85°C)
 23:43:05 [INFO]         nvme Sensor 2 Samsung SSD 980 PRO 1TB temp3: 38.85°C (max: 38.85°C)
 23:43:05 [INFO] Registering Clock display source.
-23:43:05 [INFO] Registering Gif display source.
-23:43:05 [INFO] Registering Coindesk display source.
+23:43:05 [INFO] Registering Gif display source. 
 23:43:05 [INFO] Registering DBUS notification source.
 23:43:05 [INFO] Found 5 registered providers
 23:43:05 [INFO] Trying to connect to DBUS with player preference: Some("spotify")
@@ -141,7 +136,6 @@ Simply run the binary under `target/release/apex-tux` and make sure the settings
 The output should look something like this:
 
 ```shell
-23:18:14 [INFO] Registering Coindesk display source.
 23:18:14 [INFO] Registering Clock display source.
 23:18:14 [INFO] Registering MPRIS2 display source.
 23:18:14 [INFO] Registering DBUS notification source.
@@ -184,7 +178,7 @@ If you have a feature to add or a bug to fix please feel free to open an issue o
   - GIFs?
 - Change the USB crate to something async instead
 - Add documentation on how to add custom providers
-- Switch from GATs to async traits once there here
+- Switch from GATs to async traits once they're here
 - Add support for more notifications
 - Package this up for Debian/Arch/Flatpak etc.
 
