@@ -1,7 +1,7 @@
 use std::{
     cell::RefCell,
     fs::File,
-    io::Read,
+    io::{Cursor, Read},
     rc::Rc,
     sync::atomic::{AtomicUsize, Ordering},
     time::{Duration, Instant},
@@ -188,7 +188,7 @@ impl ImageRenderer {
         let mut decoded_frames = Vec::new();
         let mut delays = Vec::new();
 
-        if let Ok(gif) = image::codecs::gif::GifDecoder::new(&buffer[..]) {
+        if let Ok(gif) = image::codecs::gif::GifDecoder::new(Cursor::new(buffer)) {
             //if the image is a gif
             //NOTE we do not check for the size of each frame!
             //We can avoid doing so since we have the Self::fit_image which will resize the
@@ -200,7 +200,11 @@ impl ImageRenderer {
                 if let Ok(frame) = frame {
                     //TODO some gifs do not have delays embedded, we should use a 100 ms in that
                     // case
-                    delays.push(Duration::from(frame.delay()).as_millis() as u16);
+                    let frame_delay: Duration = frame.delay().into();
+                    let delay_ms = frame_delay
+                        .as_millis()
+                        .min(u128::from(u16::MAX)) as u16;
+                    delays.push(delay_ms);
                     let resized = Self::fit_image(
                         DynamicImage::ImageRgba8(frame.into_buffer()),
                         Point::new(DISPLAY_WIDTH, DISPLAY_HEIGHT),
