@@ -14,5 +14,5 @@ async = []
 anyhow = "1.0.44"
 bitvec = "1.0.1"
 embedded-graphics = "0.8"
-hidapi = { version = "1.2.6", optional = true }
+hidapi = { version = "1.2.6", optional = true, default-features = false, features = ["linux-static-hidraw"] }
 num_enum = "0.5.4"
