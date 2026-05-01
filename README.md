@@ -37,6 +37,7 @@ This currently supports the following devices:
 - Apex Pro
 - Apex 5
 - Apex 7
+- Apex Pro TKL Wireless Gen 3 (wired and wireless)
 
 Other devices may be compatible and all that is needed is to add the ID to apex-hardware/src/usb.rs.
 
