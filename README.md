@@ -15,6 +15,7 @@ Make use of your OLED screen instead of letting the SteelSeries logo burn itself
 - Discord notifications (requires DBus)
 - Clock
 - System metrics
+- PipeWire equalizer
 - Scrolling text
 - No burn-in from constantly displaying a static image
 
@@ -77,12 +78,13 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="<PRODUCT ID HERE>
 
 - Install Rust **nightly** using [rustup](https://rustup.rs/)
 - Install required dependencies
-  - For Ubuntu: `sudo apt install libssl-dev libdbus-1-dev libusb-1.0-0-dev`
+  - For Ubuntu: `sudo apt install libssl-dev libdbus-1-dev libusb-1.0-0-dev libpipewire-0.3-dev`
 - Clone the repository: `git clone git@github.com:not-jan/apex-tux.git`
 - Change the directory into the repository: `cd apex-tux`
 - Compile the app using the features you want
   - If you **don't** run DBus you have to disable the dbus feature: `cargo build --release --no-default-features --features crypto,usb`
   - Otherwise just run `cargo build --release --features sysinfo,hotkeys,image`
+  - To enable the equalizer source on Linux: `cargo build --release --features sysinfo,hotkeys,image,equalizer`
   - If you **don't** have an Apex device around at the moment or want to develop more easily you can enable the simulator: `cargo build --release --no-default-features --features crypto,clock,dbus-support,simulator`
 
 ## Configuration
@@ -128,6 +130,7 @@ $ target/release/apex-tux
 In our case we need to set a right value for the sensor(`acpitz temp1`, critical temperatured one, i.e., cpu) and the network interface(`wlp3s0`, wifi) in the `[sysinfo]` section.
 
 You can set your default media player on the `[mpris2]` section.
+The equalizer source uses PipeWire and is configured in the `[equalizer]` section.
 
 
 ## Usage
