@@ -1,5 +1,5 @@
 use crate::{device::FrameBuffer, Device};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use embedded_graphics::{
     pixelcolor::BinaryColor,
     prelude::*,
@@ -88,7 +88,18 @@ impl USBDevice {
         let oled_cmd = oled_cmd(device.product_id());
 
         // This requires udev rules to be setup properly.
-        let handle = device.open_device(&api)?;
+        let path = device.path().to_string_lossy().into_owned();
+        let product = device.product_string().unwrap_or("unknown");
+        let interface = device.interface_number();
+        let handle = device.open_device(&api).with_context(|| {
+            format!(
+                "failed to open HID device {product} {:04x}:{:04x} on interface {interface} at \
+                 {path}. This usually means the matching hidraw udev rule did not apply to the \
+                 device node.",
+                device.vendor_id(),
+                device.product_id()
+            )
+        })?;
 
         Ok(Self {
             handle,
