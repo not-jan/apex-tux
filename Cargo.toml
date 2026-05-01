@@ -49,6 +49,7 @@ apex-engine = { path = "./apex-engine", optional = true }
 sysinfo = { version = "0.27.7", optional = true }
 image  = { version = "0.25", optional = true }
 dirs = "6"
+rustfft = { version = "6.4", optional = true }
 
 
 [target.'cfg(target_os = "windows")'.dependencies]
@@ -59,6 +60,7 @@ apex-windows = {path = "./apex-windows"}
 apex-mpris2 = { path = "./apex-mpris2", optional = true }
 dbus = { version = "0.9", optional = true }
 dbus-tokio = { version = "0.7.6", optional = true }
+pipewire = { version = "0.9.2", optional = true }
 
 [features]
 default = ["dbus-support", "usb"]
@@ -69,4 +71,5 @@ hotkeys = ["apex-input/hotkeys"]
 engine = ["apex-engine"]
 sysinfo = ["dep:sysinfo"]
 image = ["dep:image"]
+equalizer = ["dep:rustfft", "dep:pipewire"]
 debug = []

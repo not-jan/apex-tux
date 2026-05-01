@@ -93,16 +93,20 @@ impl Player {
 impl AsyncPlayer for Player {
     type Metadata = Metadata;
 
-    type MetadataFuture<'b> = impl Future<Output = Result<Self::Metadata>> + 'b
+    type MetadataFuture<'b>
+        = impl Future<Output = Result<Self::Metadata>> + 'b
     where
         Self: 'b;
-    type NameFuture<'b> = impl Future<Output = String> + 'b
+    type NameFuture<'b>
+        = impl Future<Output = String> + 'b
     where
         Self: 'b;
-    type PlaybackStatusFuture<'b> = impl Future<Output = Result<PlaybackStatus>> + 'b
+    type PlaybackStatusFuture<'b>
+        = impl Future<Output = Result<PlaybackStatus>> + 'b
     where
         Self: 'b;
-    type PositionFuture<'b> = impl Future<Output = Result<i64>> + 'b
+    type PositionFuture<'b>
+        = impl Future<Output = Result<i64>> + 'b
     where
         Self: 'b;
 

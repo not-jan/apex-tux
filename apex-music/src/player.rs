@@ -71,16 +71,20 @@ pub trait AsyncPlayer {
 impl<T: Player + Sized> AsyncPlayer for T {
     type Metadata = <T as Player>::Metadata;
 
-    type MetadataFuture<'a> = impl Future<Output = Result<Self::Metadata>> + 'a
+    type MetadataFuture<'a>
+        = impl Future<Output = Result<Self::Metadata>> + 'a
     where
         T: 'a;
-    type NameFuture<'a> = impl Future<Output = String>
+    type NameFuture<'a>
+        = impl Future<Output = String>
     where
         T: 'a;
-    type PlaybackStatusFuture<'a> = impl Future<Output = Result<PlaybackStatus>>
+    type PlaybackStatusFuture<'a>
+        = impl Future<Output = Result<PlaybackStatus>>
     where
         T: 'a;
-    type PositionFuture<'a> = impl Future<Output = Result<i64>>
+    type PositionFuture<'a>
+        = impl Future<Output = Result<i64>>
     where
         T: 'a;
 
@@ -132,13 +136,16 @@ pub trait AsyncMetadata {
 
 /// Blanket implementation for non-async Metadata sources
 impl<T: Metadata + Sized> AsyncMetadata for T {
-    type ArtistsFuture<'a> = impl Future<Output = Result<String>> + 'a
+    type ArtistsFuture<'a>
+        = impl Future<Output = Result<String>> + 'a
     where
         T: 'a;
-    type LengthFuture<'a> = impl Future<Output = Result<u64>> + 'a
+    type LengthFuture<'a>
+        = impl Future<Output = Result<u64>> + 'a
     where
         T: 'a;
-    type TitleFuture<'a> = impl Future<Output = Result<String>> + 'a
+    type TitleFuture<'a>
+        = impl Future<Output = Result<String>> + 'a
     where
         T: 'a;
 

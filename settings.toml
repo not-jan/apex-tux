@@ -49,3 +49,27 @@ path = "images/sample_1.gif"
 # This only works if the image feature is passed in the build instructions
 # It supports all those formats : https://github.com/image-rs/image/tree/8824ab3375ddab0fd3429fe3915334523d50c532#supported-image-formats
 # (even in color, but it will only display in black and white)
+
+[equalizer]
+# enabled = true
+# The refresh rate of the displayed bars in milliseconds
+# can desync if too fast, screen is 60FPS, so 1000(ms) / 60 ~= 16.6 ms
+# polling_interval = 16.7
+# Number of bars across the screen, I would recommand a number divisible by 128 (EG: 64,32)
+# otherwise it has to center the bars, and leaves blakc border around
+# MAX : 128, 1 bar/pixel
+# bar_count = 32
+# Capture the default output sink monitor instead of an input source
+# capture_sink = true
+# Optional PipeWire target object id/name to capture from
+# target_object = "alsa_output.usb-SteelSeries_SteelSeries_Arctis_Nova_5-00.analog-stereo"
+# Frequency window for the bar mapping, in Hz
+# (most free streaming compress so much, that there's nothing above 16KHz)
+# min_frequency = 20
+# max_frequency = 16000
+# Dynamic range used to map FFT magnitudes to bar heights
+# min_db = -72
+# max_db = -18
+# Separate rise/fall smoothing
+# rise_smoothing = 0.6
+# fall_smoothing = 0.4
