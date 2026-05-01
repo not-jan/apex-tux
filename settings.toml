@@ -51,7 +51,7 @@ path = "images/sample_1.gif"
 # (even in color, but it will only display in black and white)
 
 [equalizer]
-enabled = true
+# enabled = true
 # The refresh rate of the displayed bars in milliseconds
 # can desync if too fast, screen is 60FPS, so 1000(ms) / 60 ~= 16.6 ms
 # polling_interval = 16.7
