@@ -130,6 +130,27 @@ In our case we need to set a right value for the sensor(`acpitz temp1`, critical
 
 You can set your default media player on the `[mpris2]` section.
 
+### Text file provider
+
+The optional `file` provider displays the contents of a UTF-8 text file as a
+rotating source. The file is reread at the configured interval, so values
+written by another process are reflected while apex-tux is running. The first
+four lines are displayed as separate rows, and longer lines scroll across the
+display.
+
+Enable it in `settings.toml`:
+
+```toml
+[file]
+enabled = true
+priority = 3
+path = "/tmp/file.txt"
+polling_interval = 1000
+```
+
+The provider keeps the last successfully read value if the file is temporarily
+unavailable. Additional lines beyond the first four are ignored.
+
 ### Notifications
 
 Notification display time can be configured in seconds. Longer notification
