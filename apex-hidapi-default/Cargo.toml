@@ -1,0 +1,7 @@
+[package]
+name = "apex-hidapi-default"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hidapi = "1.2.6"

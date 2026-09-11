@@ -41,6 +41,18 @@ compile_error!(
     "The features `simulator` and `usb` are mutually exclusive. Use --no-default-features!"
 );
 
+#[cfg(all(feature = "simulator", feature = "experimental-openrgb-support"))]
+compile_error!(
+    "The features `simulator` and `experimental-openrgb-support` are mutually exclusive. Congrats \
+     on getting here!"
+);
+
+#[cfg(all(feature = "usb", feature = "experimental-openrgb-support"))]
+compile_error!(
+    "The features `usb` and `experimental-openrgb-support` are mutually exclusive. Use \
+     --no-default-features to switch HID backends."
+);
+
 #[cfg(feature = "simulator")]
 use apex_simulator::Simulator;
 
@@ -48,7 +60,11 @@ use crate::render::{scheduler, scheduler::Scheduler};
 #[cfg(feature = "engine")]
 use apex_engine::Engine;
 use apex_hardware::AsyncDevice;
-#[cfg(all(feature = "usb", target_os = "linux", not(feature = "engine")))]
+#[cfg(all(
+    any(feature = "usb", feature = "experimental-openrgb-support"),
+    target_os = "linux",
+    not(feature = "engine")
+))]
 use apex_hardware::USBDevice;
 use log::{info, LevelFilter};
 use simplelog::{Config as LoggerConfig, SimpleLogger};
@@ -64,7 +80,11 @@ pub async fn main() -> Result<()> {
 
     // This channel is used to send commands to the scheduler
     let (tx, rx) = broadcast::channel::<Command>(100);
-    #[cfg(all(feature = "usb", target_family = "unix", not(feature = "engine")))]
+    #[cfg(all(
+        any(feature = "usb", feature = "experimental-openrgb-support"),
+        target_family = "unix",
+        not(feature = "engine")
+    ))]
     let mut device = USBDevice::try_connect()?;
 
     #[cfg(feature = "hotkeys")]

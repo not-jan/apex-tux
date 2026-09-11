@@ -7,12 +7,14 @@ edition = "2021"
 
 [features]
 default = []
-usb = ["hidapi"]
+usb = ["dep:apex-hidapi-static"]
+experimental-openrgb-support = ["dep:apex-hidapi-default"]
 async = []
 
 [dependencies]
 anyhow = "1.0.44"
+apex-hidapi-default = { path = "../apex-hidapi-default", optional = true }
+apex-hidapi-static = { path = "../apex-hidapi-static", optional = true }
 bitvec = "1.0.1"
 embedded-graphics = "0.8"
-hidapi = { version = "1.2.6", optional = true }
 num_enum = "0.5.4"

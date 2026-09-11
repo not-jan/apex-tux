@@ -8,6 +8,8 @@ edition = "2021"
 members = [
     "apex-ctl",
     "apex-hardware",
+    "apex-hidapi-default",
+    "apex-hidapi-static",
     "apex-mpris2",
     "apex-music",
     "apex-simulator",
@@ -65,6 +67,7 @@ default = ["dbus-support", "usb"]
 dbus-support = ["dbus", "dbus-tokio", "apex-mpris2"]
 simulator = ["apex-simulator"]
 usb = ["apex-hardware/usb"]
+experimental-openrgb-support = ["apex-hardware/experimental-openrgb-support"]
 hotkeys = ["apex-input/hotkeys"]
 engine = ["apex-engine"]
 sysinfo = ["dep:sysinfo"]

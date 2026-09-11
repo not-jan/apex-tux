@@ -1,0 +1,7 @@
+[package]
+name = "apex-hidapi-static"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hidapi = { version = "1.2.6", default-features = false, features = ["linux-static-hidraw"] }
