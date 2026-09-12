@@ -55,7 +55,7 @@ path = "images/sample_1.gif"
 # (even in color, but it will only display in black and white)
 
 [file]
-enabled = true
+enabled = false
 # Path to a UTF-8 text file to display as a rotating source.
 path = "stats.txt"
 # The file is reread at this interval in milliseconds.
