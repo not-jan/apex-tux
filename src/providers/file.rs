@@ -5,7 +5,7 @@ use crate::{
     },
     scheduler::CONTENT_PROVIDERS,
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use apex_hardware::FrameBuffer;
 use async_stream::try_stream;
 use config::Config;
@@ -41,16 +41,19 @@ fn register_callback(config: &Config) -> Result<Box<dyn ContentWrapper>> {
 
     let path = config
         .get_str("file.path")
-        .unwrap_or_else(|_| String::from("text.txt"));
+        .map(PathBuf::from)
+        .map_err(|_| {
+            anyhow!(
+                "file provider is enabled but `file.path` is not set; add it to settings.toml"
+            )
+        })?;
+
     let polling_interval = config
         .get_int("file.polling_interval")
         .unwrap_or(1000)
         .max(1) as u64;
 
-    Ok(Box::new(FileText::new(
-        PathBuf::from(path),
-        polling_interval,
-    )?))
+    Ok(Box::new(FileText::new(path, polling_interval)?))
 }
 
 pub struct FileText {
@@ -176,6 +179,31 @@ mod tests {
             FileText::read(&path).unwrap(),
             vec!["first", "second", "third", "fourth"]
         );
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn refresh_keeps_last_content_when_file_is_missing() {
+        let path = std::env::temp_dir().join(format!(
+            "apex-tux-file-provider-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::write(&path, "test1").unwrap();
+
+        let mut provider = FileText::new(path.clone(), 1000).unwrap();
+        provider.refresh();
+        assert_eq!(provider.lines, vec!["test1"]);
+
+        fs::remove_file(&path).unwrap();
+        provider.refresh();
+        assert_eq!(provider.lines, vec!["test1"]);
+
+        fs::write(&path, "test2").unwrap();
+        provider.refresh();
+        assert_eq!(provider.lines, vec!["test2"]);
         fs::remove_file(path).unwrap();
     }
 

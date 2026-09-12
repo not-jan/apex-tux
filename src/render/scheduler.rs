@@ -89,10 +89,16 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
         mut config: Config,
     ) -> Result<()> {
         #[cfg(not(target_os = "macos"))]
-        let mut providers = CONTENT_PROVIDERS
+        let (providers, errors): (Vec<_>, Vec<_>) = CONTENT_PROVIDERS
             .iter()
             .map(|f| (f)(&mut config))
-            .collect::<Result<Vec<_>>>()?;
+            .partition_result();
+
+        for e in errors {
+            error!("{e}");
+        }
+
+        let mut providers = providers;
 
         #[cfg(target_os = "macos")]
         let mut providers = [
@@ -152,6 +158,10 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
         let size = providers.len();
         let z = current.clone();
 
+        if size == 0 {
+            info!("No content providers were initialized; continuing without an active display source.");
+        }
+
         let mut y = multiplex(providers, move || z.load(Ordering::SeqCst));
 
         //get the interval
@@ -175,12 +185,12 @@ impl<'a, T: 'a + AsyncDevice> Scheduler<'a, T> {
                     *time_last_change.borrow_mut() = Instant::now();
                     match cmd {
                         Ok(Command::Shutdown) => break,
-                        Ok(Command::NextSource) => {
+                        Ok(Command::NextSource) if size > 0 => {
                             let new = current.load(Ordering::SeqCst).wrapping_add(1) % size;
                             current.store(new, Ordering::SeqCst);
                             self.device.clear().await?;
                         },
-                        Ok(Command::PreviousSource) => {
+                        Ok(Command::PreviousSource) if size > 0 => {
                             let new = match current.load(Ordering::SeqCst) {
                                 0 => size - 1,
                                 n => (n - 1) % size
