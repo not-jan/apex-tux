@@ -53,3 +53,10 @@ path = "images/sample_1.gif"
 # This only works if the image feature is passed in the build instructions
 # It supports all those formats : https://github.com/image-rs/image/tree/8824ab3375ddab0fd3429fe3915334523d50c532#supported-image-formats
 # (even in color, but it will only display in black and white)
+
+[file]
+enabled = false
+# Path to a UTF-8 text file to display as a rotating source.
+path = "stats.txt"
+# The file is reread at this interval in milliseconds.
+polling_interval = 1000

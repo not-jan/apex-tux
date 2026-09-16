@@ -1,5 +1,7 @@
 pub(crate) mod clock;
 
+pub(crate) mod file;
+
 #[cfg(feature = "image")]
 pub(crate) mod image;
 #[cfg(any(feature = "dbus-support", target_os = "windows"))]
