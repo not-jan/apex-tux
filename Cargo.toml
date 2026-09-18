@@ -49,6 +49,8 @@ apex-engine = { path = "./apex-engine", optional = true }
 sysinfo = { version = "0.27.7", optional = true }
 image  = { version = "0.25", optional = true }
 dirs = "6"
+rustfft = { version = "6.4", optional = true }
+cpal = { version = "0.15.3", optional = true }
 
 
 [target.'cfg(target_os = "windows")'.dependencies]
@@ -69,4 +71,5 @@ hotkeys = ["apex-input/hotkeys"]
 engine = ["apex-engine"]
 sysinfo = ["dep:sysinfo"]
 image = ["dep:image"]
+equalizer = ["dep:rustfft", "dep:cpal"]
 debug = []

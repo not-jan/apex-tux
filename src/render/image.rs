@@ -201,9 +201,7 @@ impl ImageRenderer {
                     //TODO some gifs do not have delays embedded, we should use a 100 ms in that
                     // case
                     let frame_delay: Duration = frame.delay().into();
-                    let delay_ms = frame_delay
-                        .as_millis()
-                        .min(u128::from(u16::MAX)) as u16;
+                    let delay_ms = frame_delay.as_millis().min(u128::from(u16::MAX)) as u16;
                     delays.push(delay_ms);
                     let resized = Self::fit_image(
                         DynamicImage::ImageRgba8(frame.into_buffer()),

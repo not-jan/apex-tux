@@ -49,11 +49,11 @@ static NOTE_BMP: LazyLock<Bmp<'static, BinaryColor>> = LazyLock::new(|| {
 });
 
 #[cfg(target_os = "windows")]
-lazy_static! {
-// Windows doesn't expose the current progress within the song so we don't draw
-// it here TODO: Spice this up?
-static ref PLAYER_TEMPLATE: FrameBuffer = FrameBuffer::new();
-}
+static PLAYER_TEMPLATE: LazyLock<FrameBuffer> = LazyLock::new(|| {
+    // Windows doesn't expose the current progress within the song so we don't draw
+    // it here TODO: Spice this up?
+    FrameBuffer::new()
+});
 
 #[cfg(not(target_os = "windows"))]
 static PLAYER_TEMPLATE: LazyLock<FrameBuffer> = LazyLock::new(|| {

@@ -123,13 +123,16 @@ impl<T: Device> AsyncDevice for T
 where
     T: 'static,
 {
-    type ClearResult<'a> = impl Future<Output = Result<()>> + 'a
+    type ClearResult<'a>
+        = impl Future<Output = Result<()>> + 'a
     where
         Self: 'a;
-    type DrawResult<'a> = impl Future<Output = Result<()>> + 'a
+    type DrawResult<'a>
+        = impl Future<Output = Result<()>> + 'a
     where
         Self: 'a;
-    type ShutdownResult<'a> = impl Future<Output = Result<()>> + 'a
+    type ShutdownResult<'a>
+        = impl Future<Output = Result<()>> + 'a
     where
         Self: 'a;
 
