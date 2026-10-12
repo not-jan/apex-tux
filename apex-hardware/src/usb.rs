@@ -32,6 +32,11 @@ enum SupportedDevice {
     ApexPro = 0x1610,
     Apex7TKL = 0x1618,
     Apex5 = 0x161C,
+    /// Apex 5 hardware revision (2026). Same single 642-byte feature report
+    /// on interface 1 as 0x161C, but the OLED expects SSD1306 page-major
+    /// bytes (ApexProGen3 encoding). Exposes five HID interfaces: 0 and 2
+    /// are the keyboard, 3 is media keys, 4 is a vendor input stream.
+    Apex5Gen3 = 0x1650,
     ApexProGen3 = 0x1640,
     // Gen 3 devices
     ApexProTKLWirelessGen3 = 0x1646,
@@ -47,7 +52,7 @@ enum DeviceProtocol {
 
 fn device_protocol(product_id: u16) -> DeviceProtocol {
     match product_id {
-        0x1640 => DeviceProtocol::ApexProGen3,
+        0x1640 | 0x1650 => DeviceProtocol::ApexProGen3,
         0x1646 | 0x1644 => DeviceProtocol::ChunkedGen3,
         _ => DeviceProtocol::Legacy,
     }

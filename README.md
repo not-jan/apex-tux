@@ -35,7 +35,7 @@ Source: [Arch Wiki](https://wiki.archlinux.org/title/MPRIS#Supported_clients)
 This currently supports the following devices:
 
 - Apex Pro
-- Apex 5
+- Apex 5 (both the original `1038:161c` and the 2026 revision `1038:1650`)
 - Apex 7
 - Apex Pro TKL Wireless Gen 3 (wired and wireless)
 
